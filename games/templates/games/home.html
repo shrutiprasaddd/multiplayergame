@@ -1,0 +1,26 @@
+{% extends 'games/index.html' %}
+
+{% block content %}
+<div class="home-container">
+    <h2 class="home-heading">Welcome to the Game Platform</h2>
+    <p class="home-description">Choose your favorite game and get started!</p>
+
+    <div class="game-list">
+        {% for game in games %}
+            <div class="game-card">
+                <img src="{{ game.image.url }}" alt="{{ game.name }} logo" class="game-image">
+                <h3 class="game-title">{{ game.name }}</h3>
+                <p class="game-description">{{ game.description }}</p>
+                <p class="game-id">{{game.game_id}}</p>
+                <a href="{% url 'game_room_views' game.game_id %}" class="btn btn-primary join-room">
+                    Manage Room
+                </a>
+                
+                
+
+
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

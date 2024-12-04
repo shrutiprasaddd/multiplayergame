@@ -1,0 +1,100 @@
+{% extends 'games/index.html' %}
+
+{% block title %}Manage Room{% endblock %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'games/css/room.css' %}">
+
+<div class="room-container">
+    <h2>{{ game.name }} Room Management</h2>
+
+    <!-- Create Room Form -->
+    <h3>Create a Room</h3>
+    <form method="POST" id="create-room-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create">
+
+        <h4>Select Room Type</h4>
+        <label>
+            <input type="radio" name="room_type" value="public" checked> Public
+        </label>
+        <label>
+            <input type="radio" name="room_type" value="private"> Private
+        </label>
+        
+        <button type="submit" class="create-room-button">Create Room</button>
+    </form>
+
+    <!-- Join Room Form -->
+    <h3>Join an Existing Room</h3>
+    <form method="POST" id="join-room-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="join">
+        <input type="text" name="room_code" placeholder="Enter Room Code" required>
+        <button type="submit" class="join-room-button">Join Room</button>
+    </form>
+
+    <!-- Display Room Code or Information -->
+    <div id="room-info" style="margin-top: 1rem;"></div>
+
+    <!-- Available Rooms -->
+    <h3>Available Rooms</h3>
+    {% for room in game.game_room_set.all %}
+        <a href="{% url 'game_lobby' room_code=room.room_code game_id=game.game_id %}">
+            Join Room {{ room.room_code }}
+        </a><br>
+    {% empty %}
+        <p>No rooms available.</p>
+    {% endfor %}
+</div>
+
+<script>
+document.getElementById('create-room-form').onsubmit = async function (e) {
+    e.preventDefault();
+    const response = await fetch("", {
+        method: "POST",
+        body: new FormData(this),
+    });
+    const data = await response.json();
+    if (response.ok) {
+        document.getElementById('room-info').innerHTML = `Room Created! Code: ${data.room_code}`;
+    } else {
+        alert(data.error || "An error occurred.");
+    }
+};
+
+document.getElementById('join-room-form').onsubmit = async function (e) {
+    e.preventDefault();
+    const response = await fetch("", {
+        method: "POST",
+        body: new FormData(this),
+    });
+    const data = await response.json();
+    if (response.ok) {
+        // Redirect to the room lobby after joining the room
+        window.location.href = `/game_lobby/${data.room_code}/${data.game_id}/`;
+    } else {
+        alert(data.error || "An error occurred.");
+    }
+};
+
+
+document.getElementById('create-room-form').onsubmit = async function (e) {
+    e.preventDefault();
+    const response = await fetch("", {
+        method: "POST",
+        body: new FormData(this),
+    });
+    const data = await response.json();
+    if (response.ok) {
+        // Show the room code dynamically
+        document.getElementById('room-info').innerHTML = `<p>Room Created Successfully! Your Room Code is: <strong>${data.room_code}</strong></p>`;
+    } else {
+        alert(data.error || "An error occurred while creating the room.");
+    }
+};
+
+
+</script>
+
+{% endblock %}

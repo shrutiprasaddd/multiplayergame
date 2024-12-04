@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Multiplayer Chess Game</title>
+
+<style>
+
+#chessboard {
+
+width: 400px;
+
+height: 400px;
+
+margin: 0 auto;
+
+border: 2px solid #000;
+
+display: grid;
+
+grid-template-columns: repeat(8, 1fr);
+
+grid-template-rows: repeat(8, 1fr);
+
+}
+
+  
+
+.square {
+
+width: 50px;
+
+height: 50px;
+
+display: flex;
+
+align-items: center;
+
+justify-content: center;
+
+font-size: 40px; /* Larger font size for emoji */
+
+position: relative;
+
+}
+
+  
+
+.white {
+
+background-color: #f0d9b5;
+
+}
+
+  
+
+.black {
+
+background-color: #b58863;
+
+}
+
+  
+
+.highlight {
+
+outline: 2px solid yellow;
+
+}
+
+  
+
+#chatBox {
+
+margin-top: 20px;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>Multiplayer Chess</h1>
+
+<div id="chessboard"></div>
+
+  
+
+<!-- Chat and messaging -->
+
+<div id="chatBox">
+
+<h2>Chat</h2>
+
+<textarea id="messageInput" rows="3" cols="30"></textarea>
+
+<button id="sendMessage">Send Message</button>
+
+<ul id="messagesList"></ul>
+
+</div>
+
+  
+
+<script>
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  const chessboard = document.getElementById('chessboard');
+  let selectedCell = null;
+  let currentPlayer = 'w'; // 'w' for white, 'b' for black
+  const roomCode = prompt("Enter Room Code:");
+  const socket = new WebSocket(`ws://127.0.0.1:8000/ws/game/${roomCode}/`);
+
+  const pieceEmojis = {
+    bR: '♜', bN: '♞', bB: '♝', bQ: '♛', bK: '♚', bP: '♟',
+    wR: '♖', wN: '♘', wB: '♗', wQ: '♕', wK: '♔', wP: '♙',
+  };
+
+  let board = [
+    ["bR", "bN", "bB", "bQ", "bK", "bB", "bN", "bR"],
+    ["bP", "bP", "bP", "bP", "bP", "bP", "bP", "bP"],
+    [null, null, null, null, null, null, null, null],
+    [null, null, null, null, null, null, null, null],
+    [null, null, null, null, null, null, null, null],
+    [null, null, null, null, null, null, null, null],
+    ["wP", "wP", "wP", "wP", "wP", "wP", "wP", "wP"],
+    ["wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR"],
+  ];
+
+  const renderBoard = () => {
+    chessboard.innerHTML = "";
+    for (let y = 0; y < 8; y++) {
+      for (let x = 0; x < 8; x++) {
+        const cell = document.createElement("div");
+        cell.classList.add("cell", (x + y) % 2 === 0 ? "white" : "black");
+        const piece = board[y][x];
+        if (piece) cell.textContent = pieceEmojis[piece];
+        cell.dataset.row = y;
+        cell.dataset.col = x;
+        cell.addEventListener("click", () => handleCellClick(x, y));
+        chessboard.appendChild(cell);
+      }
+    }
+  };
+
+  const isValidMove = (from, to, piece) => {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+
+    switch (piece[1]) {
+      case 'P': // Pawn
+        const direction = piece[0] === 'w' ? -1 : 1;
+        if (dy === direction && dx === 0 && !board[to.y][to.x]) return true; // Forward move
+        if (dy === direction && Math.abs(dx) === 1 && board[to.y][to.x]?.[0] !== piece[0]) return true; // Capture
+        break;
+      case 'R': // Rook
+        if ((dx === 0 || dy === 0) && isPathClear(from, to)) return true;
+        break;
+      case 'N': // Knight
+        if ((Math.abs(dx) === 2 && Math.abs(dy) === 1) || (Math.abs(dx) === 1 && Math.abs(dy) === 2)) return true;
+        break;
+      case 'B': // Bishop
+        if (Math.abs(dx) === Math.abs(dy) && isPathClear(from, to)) return true;
+        break;
+      case 'Q': // Queen
+        if ((Math.abs(dx) === Math.abs(dy) || dx === 0 || dy === 0) && isPathClear(from, to)) return true;
+        break;
+      case 'K': // King
+        if (Math.abs(dx) <= 1 && Math.abs(dy) <= 1) return true;
+        break;
+    }
+    return false;
+  };
+
+  const isPathClear = (from, to) => {
+    const dx = Math.sign(to.x - from.x);
+    const dy = Math.sign(to.y - from.y);
+    let x = from.x + dx;
+    let y = from.y + dy;
+
+    while (x !== to.x || y !== to.y) {
+      if (board[y][x]) return false;
+      x += dx;
+      y += dy;
+    }
+    return true;
+  };
+
+  const handleCellClick = (x, y) => {
+    if (!selectedCell) {
+      if (board[y][x] && board[y][x][0] === currentPlayer) {
+        selectedCell = { x, y };
+        highlightCell(x, y, true);
+      }
+    } else {
+      const from = selectedCell;
+      const to = { x, y };
+      const piece = board[from.y][from.x];
+      if (isValidMove(from, to, piece)) {
+        board[to.y][to.x] = piece;
+        board[from.y][from.x] = null;
+        currentPlayer = currentPlayer === 'w' ? 'b' : 'w';
+        socket.send(JSON.stringify({ type: "move", board, currentPlayer }));
+        renderBoard();
+      } else {
+        alert("Invalid move!");
+      }
+      highlightCell(from.x, from.y, false);
+      selectedCell = null;
+    }
+  };
+
+  const highlightCell = (x, y, highlight) => {
+    const cell = document.querySelector(`.cell[data-row="${y}"][data-col="${x}"]`);
+    if (cell) cell.classList.toggle("highlight", highlight);
+  };
+
+  socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === "move") {
+      board = data.board;
+      currentPlayer = data.currentPlayer;
+      renderBoard();
+    } else if (data.type === "chat_message") {
+      displayMessage(data.message);
+    }
+  };
+
+  const sendMessage = () => {
+    const message = document.getElementById("messageInput").value.trim();
+    if (message) {
+      socket.send(JSON.stringify({ type: "chat_message", message }));
+      document.getElementById("messageInput").value = "";
+    }
+  };
+
+  const displayMessage = (message) => {
+    const li = document.createElement("li");
+    li.textContent = message;
+    document.getElementById("messagesList").appendChild(li);
+  };
+
+  document.getElementById("sendMessage").addEventListener("click", sendMessage);
+
+  renderBoard();
+});
+
+
+
+</script>
+
+</body>
+
+</html>
