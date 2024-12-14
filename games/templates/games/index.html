@@ -1,34 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    {%load static%}
+    {% load static %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Game Platform{% endblock %}</title>
-   <link rel="stylesheet" href="{% static 'games/index/index.css' %}">
+    <title>Game Platform</title>
+    <link rel="stylesheet" href="{% static 'css/games/home.css' %}">
+    <link rel="stylesheet" href="{% static 'css/games/index.css' %}">
+    
+    
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&family=Poppins:wght@300;400&display=swap" rel="stylesheet">
+    <meta name="description" content="A platform for online multiplayer games, including Snake, Agar.io, Chess, and more. Join now!">
+    <meta name="keywords" content="games, multiplayer, online, Snake, Agar.io, Chess">
 </head>
+
 <body>
     <header class="main-header">
-        <h1><a href="{% url 'home' %}">Game Platform</a></h1>
-        <nav class="nav-bar">
-            <ul>
-                <li><a href="{% url 'home' %}">Home</a></li>
-                {% if not user.is_authenticated %}
-                    <li><a href="{% url 'signup' %}">Signup</a></li>
-                    <li><a href="{% url 'login' %}">Login</a></li>
-                {% else %}
-                    <li><a href="{% url 'logout' %}">Logout</a></li>
-                {% endif %}
-            </ul>
-            
-        </nav>
+        <div class="container">
+            <h1><a href="{% url 'home' %}" class="logo">Game Platform</a></h1>
+            <nav class="nav-bar">
+                <ul>
+                    <li><a href="{% url 'home' %}" class="nav-link">Home</a></li>
+                    {% if not user.is_authenticated %}
+                    <li><a href="{% url 'signup' %}" class="nav-link">Signup</a></li>
+                    <li><a href="{% url 'login' %}" class="nav-link">Login</a></li>
+                    {% else %}
+                    <li><a href="{% url 'logout' %}" class="nav-link">Logout</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
     </header>
+
     <main class="content-container">
-        {% block content %}
-        {% endblock %}
+        <div class="container">
+            {% block content %}
+            <!-- Dynamic content will be injected here -->
+            {% endblock %}
+        </div>
     </main>
+
     <footer class="main-footer">
-        <p>© {{ year }} Game Platform. All Rights Reserved.</p>
+        <div class="container">
+            <p>© {{ year }} <a href="{% url 'home' %}" class="footer-logo">Game Platform</a>. All Rights Reserved.</p>
+            <ul class="social-links">
+                <li><a href="#" target="_blank" class="social-icon"><img src="{% static 'images/facebook-icon.svg' %}" alt="Facebook"></a></li>
+                <li><a href="#" target="_blank" class="social-icon"><img src="{% static 'images/twitter-icon.svg' %}" alt="Twitter"></a></li>
+                <li><a href="#" target="_blank" class="social-icon"><img src="{% static 'images/instagram-icon.svg' %}" alt="Instagram"></a></li>
+            </ul>
+        </div>
     </footer>
+
+    {% block extra_js %}
+    <!-- Additional JavaScript files can be added here -->
+    {% endblock %}
 </body>
+
 </html>

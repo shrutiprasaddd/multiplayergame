@@ -1,6 +1,8 @@
 {% extends 'games/index.html' %}
 
 {% block content %}
+{%load static%}
+<link rel="stylesheet" href="{% static 'css/games/lobby.css' %}">
 <h3>Room: {{ game_room.room_code }} - {{ game_room.game.name }}</h3>
 <p>Game Code: {{ game_code }}</p>
 

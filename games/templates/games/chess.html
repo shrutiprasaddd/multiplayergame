@@ -1,263 +1,273 @@
 <!DOCTYPE html>
-
 <html lang="en">
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiplayer Chess</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
 
-<meta charset="UTF-8">
+        h1 {
+            margin-bottom: 20px;
+        }
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+        .board {
+            display: grid;
+            grid-template-columns: repeat(8, 50px);
+            grid-template-rows: repeat(8, 50px);
+            gap: 0;
+            margin-bottom: 20px;
+        }
 
-<title>Multiplayer Chess Game</title>
+        .square {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+        }
 
-<style>
+        .light {
+            background-color: #f0d9b5;
+        }
 
-#chessboard {
+        .dark {
+            background-color: #b58863;
+        }
 
-width: 400px;
+        .selected {
+            outline: 2px solid yellow;
+        }
 
-height: 400px;
+        .chat {
+            width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
 
-margin: 0 auto;
+        .messages {
+            height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px solid #ccc;
+            background: #fff;
+        }
 
-border: 2px solid #000;
+        .message-input {
+            display: flex;
+            gap: 10px;
+        }
 
-display: grid;
+        .message-input input {
+            flex-grow: 1;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
 
-grid-template-columns: repeat(8, 1fr);
+        .message-input button {
+            padding: 5px 10px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
 
-grid-template-rows: repeat(8, 1fr);
-
-}
-
-  
-
-.square {
-
-width: 50px;
-
-height: 50px;
-
-display: flex;
-
-align-items: center;
-
-justify-content: center;
-
-font-size: 40px; /* Larger font size for emoji */
-
-position: relative;
-
-}
-
-  
-
-.white {
-
-background-color: #f0d9b5;
-
-}
-
-  
-
-.black {
-
-background-color: #b58863;
-
-}
-
-  
-
-.highlight {
-
-outline: 2px solid yellow;
-
-}
-
-  
-
-#chatBox {
-
-margin-top: 20px;
-
-}
-
-</style>
-
+        .message-input button:hover {
+            background-color: #0056b3;
+        }
+    </style>
 </head>
 
 <body>
+    <h1>Multiplayer Chess</h1>
 
-<h1>Multiplayer Chess</h1>
+    <div id="board" class="board"></div>
 
-<div id="chessboard"></div>
+    <div class="chat">
+        <h2>Chat</h2>
+        <div id="messages" class="messages"></div>
+        <div class="message-input">
+            <input id="chatInput" type="text" placeholder="Type a message...">
+            <button id="sendButton">Send</button>
+        </div>
+    </div>
 
-  
+    <script>
+        const boardEl = document.getElementById('board');
+        const messagesEl = document.getElementById('messages');
+        const chatInput = document.getElementById('chatInput');
+        const sendButton = document.getElementById('sendButton');
 
-<!-- Chat and messaging -->
+        const pieceEmojis = {
+            'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚', 'p': '♟',
+            'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔', 'P': '♙'
+        };
 
-<div id="chatBox">
+        const initialBoard = [
+            ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
+            ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
+            ['', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
+            ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
+        ];
 
-<h2>Chat</h2>
+        let board = JSON.parse(JSON.stringify(initialBoard));
+        let selectedSquare = null;
+        let currentPlayer = 'white';
+        let move = null;
 
-<textarea id="messageInput" rows="3" cols="30"></textarea>
+        const renderBoard = () => {
+            boardEl.innerHTML = '';
+            board.forEach((row, rowIndex) => {
+                row.forEach((piece, colIndex) => {
+                    const square = document.createElement('div');
+                    square.classList.add('square', (rowIndex + colIndex) % 2 === 0 ? 'light' : 'dark');
+                    square.textContent = pieceEmojis[piece] || '';
+                    square.addEventListener('click', () => handleSquareClick(rowIndex, colIndex));
+                    boardEl.appendChild(square);
 
-<button id="sendMessage">Send Message</button>
+                    if (selectedSquare && selectedSquare.row === rowIndex && selectedSquare.col === colIndex) {
+                        square.classList.add('selected');
+                    }
+                });
+            });
+        };
 
-<ul id="messagesList"></ul>
+        const handleSquareClick = (row, col) => {
+            if (!selectedSquare) {
+                if (board[row][col]) selectedSquare = { row, col };
+            } else {
+                if (isValidMove(selectedSquare, { row, col })) {
+                    const piece = board[selectedSquare.row][selectedSquare.col];
+                    board[row][col] = piece;
+                    board[selectedSquare.row][selectedSquare.col] = '';
+                    move = { from: selectedSquare, to: { row, col }, piece };
+                    selectedSquare = null;
+                    currentPlayer = currentPlayer === 'white' ? 'black' : 'white';
+                    sendMove();
+                } else {
+                    selectedSquare = null;
+                }
+            }
+            renderBoard();
+        };
 
-</div>
+        const sendMove = () => {
+            const payload = { type: 'move', move, board };
+            socket.send(JSON.stringify(payload));
+        };
 
-  
+        const addMessage = (message) => {
+            const messageEl = document.createElement('div');
+            messageEl.textContent = message;
+            messagesEl.appendChild(messageEl);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        };
 
-<script>
+        sendButton.addEventListener('click', () => {
+            const message = chatInput.value.trim();
+            if (message) {
+                const payload = { type: 'chat_message', message };
+                socket.send(JSON.stringify(payload));
+                addMessage(`You: ${message}`);
+                chatInput.value = '';
+            }
+        });
 
+        const socket = new WebSocket(`ws://127.0.0.1:8000/ws/game/${prompt('Enter Room Code')}/`);
 
-document.addEventListener('DOMContentLoaded', () => {
-  const chessboard = document.getElementById('chessboard');
-  let selectedCell = null;
-  let currentPlayer = 'w'; // 'w' for white, 'b' for black
-  const roomCode = prompt("Enter Room Code:");
-  const socket = new WebSocket(`ws://127.0.0.1:8000/ws/game/${roomCode}/`);
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'chess_move_update') {
+                move = data.move;
+                board = data.board;
+                currentPlayer = currentPlayer === 'white' ? 'black' : 'white';
+                renderBoard();
+                addMessage(`${data.player} made a move: ${data.move}`);
+            } else if (data.type === 'chat_message') {
+                addMessage(data.message);
+            }
+        };
 
-  const pieceEmojis = {
-    bR: '♜', bN: '♞', bB: '♝', bQ: '♛', bK: '♚', bP: '♟',
-    wR: '♖', wN: '♘', wB: '♗', wQ: '♕', wK: '♔', wP: '♙',
-  };
+        const isValidMove = (from, to) => {
+            const piece = board[from.row][from.col];
+            const targetPiece = board[to.row][to.col];
 
-  let board = [
-    ["bR", "bN", "bB", "bQ", "bK", "bB", "bN", "bR"],
-    ["bP", "bP", "bP", "bP", "bP", "bP", "bP", "bP"],
-    [null, null, null, null, null, null, null, null],
-    [null, null, null, null, null, null, null, null],
-    [null, null, null, null, null, null, null, null],
-    [null, null, null, null, null, null, null, null],
-    ["wP", "wP", "wP", "wP", "wP", "wP", "wP", "wP"],
-    ["wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR"],
-  ];
+            if (to.row < 0 || to.row >= 8 || to.col < 0 || to.col >= 8) return false;
 
-  const renderBoard = () => {
-    chessboard.innerHTML = "";
-    for (let y = 0; y < 8; y++) {
-      for (let x = 0; x < 8; x++) {
-        const cell = document.createElement("div");
-        cell.classList.add("cell", (x + y) % 2 === 0 ? "white" : "black");
-        const piece = board[y][x];
-        if (piece) cell.textContent = pieceEmojis[piece];
-        cell.dataset.row = y;
-        cell.dataset.col = x;
-        cell.addEventListener("click", () => handleCellClick(x, y));
-        chessboard.appendChild(cell);
-      }
-    }
-  };
+            if ((currentPlayer === 'white' && piece.toLowerCase() === piece) ||
+                (currentPlayer === 'black' && piece.toUpperCase() === piece)) {
+                return false;
+            }
 
-  const isValidMove = (from, to, piece) => {
-    const dx = to.x - from.x;
-    const dy = to.y - from.y;
+            switch (piece.toLowerCase()) {
+                case 'p':
+                    if (from.col === to.col && targetPiece === '' &&
+                        ((currentPlayer === 'white' && to.row === from.row - 1) ||
+                            (currentPlayer === 'black' && to.row === from.row + 1))) {
+                        return true;
+                    }
+                    if (Math.abs(from.col - to.col) === 1 && targetPiece !== '' &&
+                        ((currentPlayer === 'white' && to.row === from.row - 1) ||
+                            (currentPlayer === 'black' && to.row === from.row + 1))) {
+                        return true;
+                    }
+                    return false;
+                case 'n':
+                    const rowDiff = Math.abs(from.row - to.row);
+                    const colDiff = Math.abs(from.col - to.col);
+                    return (rowDiff === 2 && colDiff === 1) || (rowDiff === 1 && colDiff === 2);
+                case 'b':
+                    return Math.abs(from.row - to.row) === Math.abs(from.col - to.col) && !isPathBlocked(from, to);
+                case 'r':
+                    return (from.row === to.row || from.col === to.col) && !isPathBlocked(from, to);
+                case 'q':
+                    return (Math.abs(from.row - to.row) === Math.abs(from.col - to.col) ||
+                        from.row === to.row || from.col === to.col) && !isPathBlocked(from, to);
+                case 'k':
+                    const kingRowDiff = Math.abs(from.row - to.row);
+                    const kingColDiff = Math.abs(from.col - to.col);
+                    return kingRowDiff <= 1 && kingColDiff <= 1;
+                default:
+                    return false;
+            }
+        };
 
-    switch (piece[1]) {
-      case 'P': // Pawn
-        const direction = piece[0] === 'w' ? -1 : 1;
-        if (dy === direction && dx === 0 && !board[to.y][to.x]) return true; // Forward move
-        if (dy === direction && Math.abs(dx) === 1 && board[to.y][to.x]?.[0] !== piece[0]) return true; // Capture
-        break;
-      case 'R': // Rook
-        if ((dx === 0 || dy === 0) && isPathClear(from, to)) return true;
-        break;
-      case 'N': // Knight
-        if ((Math.abs(dx) === 2 && Math.abs(dy) === 1) || (Math.abs(dx) === 1 && Math.abs(dy) === 2)) return true;
-        break;
-      case 'B': // Bishop
-        if (Math.abs(dx) === Math.abs(dy) && isPathClear(from, to)) return true;
-        break;
-      case 'Q': // Queen
-        if ((Math.abs(dx) === Math.abs(dy) || dx === 0 || dy === 0) && isPathClear(from, to)) return true;
-        break;
-      case 'K': // King
-        if (Math.abs(dx) <= 1 && Math.abs(dy) <= 1) return true;
-        break;
-    }
-    return false;
-  };
+        const isPathBlocked = (from, to) => {
+            const rowDirection = to.row > from.row ? 1 : to.row < from.row ? -1 : 0;
+            const colDirection = to.col > from.col ? 1 : to.col < from.col ? -1 : 0;
+            let row = from.row + rowDirection;
+            let col = from.col + colDirection;
 
-  const isPathClear = (from, to) => {
-    const dx = Math.sign(to.x - from.x);
-    const dy = Math.sign(to.y - from.y);
-    let x = from.x + dx;
-    let y = from.y + dy;
+            while (row !== to.row || col !== to.col) {
+                if (board[row][col] !== '') return true;
+                row += rowDirection;
+                col += colDirection;
+            }
 
-    while (x !== to.x || y !== to.y) {
-      if (board[y][x]) return false;
-      x += dx;
-      y += dy;
-    }
-    return true;
-  };
+            return false;
+        };
 
-  const handleCellClick = (x, y) => {
-    if (!selectedCell) {
-      if (board[y][x] && board[y][x][0] === currentPlayer) {
-        selectedCell = { x, y };
-        highlightCell(x, y, true);
-      }
-    } else {
-      const from = selectedCell;
-      const to = { x, y };
-      const piece = board[from.y][from.x];
-      if (isValidMove(from, to, piece)) {
-        board[to.y][to.x] = piece;
-        board[from.y][from.x] = null;
-        currentPlayer = currentPlayer === 'w' ? 'b' : 'w';
-        socket.send(JSON.stringify({ type: "move", board, currentPlayer }));
         renderBoard();
-      } else {
-        alert("Invalid move!");
-      }
-      highlightCell(from.x, from.y, false);
-      selectedCell = null;
-    }
-  };
-
-  const highlightCell = (x, y, highlight) => {
-    const cell = document.querySelector(`.cell[data-row="${y}"][data-col="${x}"]`);
-    if (cell) cell.classList.toggle("highlight", highlight);
-  };
-
-  socket.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    if (data.type === "move") {
-      board = data.board;
-      currentPlayer = data.currentPlayer;
-      renderBoard();
-    } else if (data.type === "chat_message") {
-      displayMessage(data.message);
-    }
-  };
-
-  const sendMessage = () => {
-    const message = document.getElementById("messageInput").value.trim();
-    if (message) {
-      socket.send(JSON.stringify({ type: "chat_message", message }));
-      document.getElementById("messageInput").value = "";
-    }
-  };
-
-  const displayMessage = (message) => {
-    const li = document.createElement("li");
-    li.textContent = message;
-    document.getElementById("messagesList").appendChild(li);
-  };
-
-  document.getElementById("sendMessage").addEventListener("click", sendMessage);
-
-  renderBoard();
-});
-
-
-
-</script>
-
+    </script>
 </body>
 
 </html>

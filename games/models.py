@@ -90,3 +90,20 @@ class ActivityLog(models.Model):
 
     def __str__(self):
         return f"{self.player.username} in {self.game_room.room_code} - {self.action}"
+
+
+from django.db import models
+from django.conf import settings  # Import settings to access AUTH_USER_MODEL
+
+class Snake(models.Model):
+    player = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)  # Correct reference to User model
+    game_room = models.ForeignKey('GameRoom', on_delete=models.CASCADE)
+    length = models.IntegerField(default=1)
+    body_positions = models.JSONField(default=list)
+    direction = models.CharField(max_length=10, default='up')
+    color = models.CharField(max_length=20, default='green')
+    is_alive = models.BooleanField(default=True)
+    score = models.IntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.player.username}'s Snake in Room {self.game_room.id}"

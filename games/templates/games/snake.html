@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiplayer Snake Game</title>
+    <style>
+        /* CSS for Snake Game */
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            display: block;
+            margin: auto;
+            background-color: #111;
+            border: 2px solid #fff;
+        }
+        #scoreboard {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 20px;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div id="scoreboard">Score: <span id="score">0</span></div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        // WebSocket connection for Snake Game
+const roomCode = prompt("Enter Room Code:");
+const ws = new WebSocket(`ws://${window.location.host}/ws/snake-game/${roomCode}/`);
+
+// Initialize canvas and game variables
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const SQUARE_SIZE = 20;
+let snake = [{ x: 200, y: 200 }]; // Local player's snake
+let direction = "RIGHT";
+let snakes = {}; // All players' snakes
+let food = { x: randomCoordinate(canvas.width), y: randomCoordinate(canvas.height) };
+let score = 0;
+
+// WebSocket event handlers
+ws.onopen = function () {
+    console.log("Connected to Snake Game WebSocket.");
+};
+
+ws.onmessage = function (event) {
+    const data = JSON.parse(event.data);
+
+    if (data.type === "snake_game_update") {
+        // Update snakes data from server
+        snakes = data.snake_data;
+    }
+};
+
+ws.onclose = function () {
+    alert("Connection to Snake Game closed. Refresh to try again.");
+};
+
+// Handle player movement
+document.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowUp" && direction !== "DOWN") direction = "UP";
+    if (event.key === "ArrowDown" && direction !== "UP") direction = "DOWN";
+    if (event.key === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
+    if (event.key === "ArrowRight" && direction !== "LEFT") direction = "RIGHT";
+});
+
+// Generate random coordinates for food
+function randomCoordinate(max) {
+    return Math.floor(Math.random() * (max / SQUARE_SIZE)) * SQUARE_SIZE;
+}
+
+// Draw a square on the canvas
+function drawSquare(x, y, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, SQUARE_SIZE, SQUARE_SIZE);
+}
+
+// Draw food
+function drawFood() {
+    drawSquare(food.x, food.y, "red");
+}
+
+// Draw all players' snakes
+function drawSnakes() {
+    Object.values(snakes).forEach((playerSnake) => {
+        playerSnake.forEach((segment, index) => {
+            drawSquare(
+                segment.x,
+                segment.y,
+                index === 0 ? "blue" : "green" // Head is blue, body is green
+            );
+        });
+    });
+}
+
+// Move the local player's snake
+function moveSnake() {
+    const head = { ...snake[0] };
+
+    if (direction === "UP") head.y -= SQUARE_SIZE;
+    if (direction === "DOWN") head.y += SQUARE_SIZE;
+    if (direction === "LEFT") head.x -= SQUARE_SIZE;
+    if (direction === "RIGHT") head.x += SQUARE_SIZE;
+
+    snake.unshift(head);
+
+    // Check collision with food
+    if (head.x === food.x && head.y === food.y) {
+        score++;
+        document.getElementById("score").innerText = score;
+        food = { x: randomCoordinate(canvas.width), y: randomCoordinate(canvas.height) };
+    } else {
+        snake.pop();
+    }
+
+    // Check collision with walls
+    if (head.x < 0 || head.y < 0 || head.x >= canvas.width || head.y >= canvas.height) {
+        alert("Game Over!");
+        ws.close();
+        location.reload();
+    }
+}
+
+// Broadcast local snake's position
+function broadcastSnake() {
+    ws.send(
+        JSON.stringify({
+            type: "snake_update",
+            snake: snake,
+        })
+    );
+}
+
+// Game loop
+function gameLoop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawFood();
+    drawSnakes();
+
+    // Draw local player's snake
+    snake.forEach((segment, index) => {
+        drawSquare(segment.x, segment.y, index === 0 ? "yellow" : "lime");
+    });
+
+    moveSnake();
+    broadcastSnake();
+}
+
+// Run the game loop
+setInterval(gameLoop, 100);
+
+    </script>
+</body>
+</html>

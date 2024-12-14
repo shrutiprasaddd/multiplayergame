@@ -132,8 +132,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'accounts.CustomUser'
 
-# settings.py
-AUTH_USER_MODEL = 'accounts.CustomUser'  # Replace 'yourapp' with the actual name of your app
 
 ASGI_APPLICATION = "AllGameZone.asgi.application"
 
@@ -147,3 +145,13 @@ CHANNEL_LAYERS = {
         },
     },
 }
+import os
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+
+# Media files configuration
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
+

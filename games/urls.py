@@ -9,5 +9,5 @@ urlpatterns = [
     path('start_game/<str:room_code>/<str:game_id>/', views.start_game, name='start_game'),  # Include game_code in the URL
     path('chess/<str:room_code>', views.chess, name='chess'),
     # path('agar/', views.agar, name='agar'),
-    # path('snake/', views.snake, name='snake'),
+    path('snake/<str:room_code>', views.snake, name='snake'),
 ]

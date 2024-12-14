@@ -1,0 +1,177 @@
+/* General Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    color: #333;
+    line-height: 1.6;
+    font-size: 1rem; /* Root font size for better scaling */
+    background: linear-gradient(45deg, #f4f4f4, #d3d3d3);
+    animation: changeBackground 10s infinite alternate;
+    transform-style: preserve-3d;
+    transition: background-color 1s ease;
+    padding-top: 70px; /* Adjust padding to avoid overlap with fixed header */
+    overflow-x: hidden; /* Prevent horizontal scrolling */
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh; /* Ensure the body covers full screen height */
+}
+
+/* Container */
+.container {
+    width: 90%;
+    max-width: 1200px; /* Prevents excessive width on large screens */
+    margin: 0 auto;
+}
+
+/* Header */
+.main-header {
+    background-color: #333;
+    padding: .5rem 0;
+    color: white;
+    position: fixed; /* Fix header to the top */
+    top: 0;
+    width: 100%;
+    z-index: 1000; /* Ensure the header is on top of other elements */
+}
+
+.main-header .logo {
+    font-size: 2.5rem; /* Relative font size */
+    font-weight: 500;
+    color: #fff;
+    letter-spacing: 2px;
+}
+
+.nav-bar {
+    float: right;
+}
+
+.nav-bar ul {
+    list-style: none;
+    display: flex;
+    gap: 2rem;
+}
+
+.nav-bar .nav-link {
+    font-size: 1.125rem; /* Scalable font size */
+    font-weight: 500;
+    color: #fff;
+    padding: 0.625rem 1.25rem;
+    transition: background-color 0.3s ease;
+}
+
+.nav-bar .nav-link:hover {
+    background-color: #444;
+    border-radius: 0.3125rem;
+}
+
+.nav-bar .nav-link.active {
+    background-color: #0056b3;
+}
+
+/* Main Content */
+.content-container {
+    background-color: white;
+    padding: 5rem 0;
+    flex-grow: 1; /* Allow content to expand and fill available space */
+    overflow-y: auto; /* Enable scrolling in the main content */
+}
+
+/* Footer */
+footer.main-footer {
+    background-color: #333;
+    color: white;
+    padding: 1rem 0;
+    text-align: center;
+    width: 100%;
+    margin-top: auto; /* Push footer to the bottom of the page */
+}
+
+footer.main-footer p {
+    font-size: 1rem; /* Scalable text */
+}
+
+footer.main-footer .footer-logo {
+    font-weight: 500;
+    color: #fff;
+    letter-spacing: 2px;
+}
+
+.social-links {
+    list-style: none;
+    padding: 0;
+    margin-top: 1rem;
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+}
+
+.social-links .social-icon img {
+    width: 2rem; /* Relative size */
+    height: 2rem; /* Relative size */
+    transition: transform 0.3s ease;
+}
+
+.social-links .social-icon img:hover {
+    transform: scale(1.1);
+}
+
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+    .nav-bar {
+        float: none;
+        text-align: center;
+    }
+
+    .nav-bar ul {
+        display: block;
+        margin-top: 2rem;
+    }
+
+    .nav-bar .nav-link {
+        display: block;
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .main-header {
+        padding: 1.5rem 0;
+    }
+
+    .main-header .logo {
+        font-size: 2.25rem;
+    }
+
+    .nav-bar ul {
+        gap: 1rem;
+    }
+
+    footer.main-footer {
+        padding: 1rem 0;
+    }
+}
+
+/* 3D Background Color Animation */
+@keyframes changeBackground {
+    0% {
+        background: linear-gradient(45deg, #ff6b6b, #f8d7da);
+    }
+    25% {
+        background: linear-gradient(45deg, #ffcc00, #fff5cc);
+    }
+    50% {
+        background: linear-gradient(45deg, #4e73df, #d1e7f7);
+    }
+    75% {
+        background: linear-gradient(45deg, #28a745, #c3e6cb);
+    }
+    100% {
+        background: linear-gradient(45deg, #6f42c1, #e2d7f5);
+    }
+}

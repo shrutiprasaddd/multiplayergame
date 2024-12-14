@@ -88,7 +88,7 @@ def start_game(request, room_code, game_id):
             return render(request, 'games/chess.html', {'game_room': game_room})
         elif game.slug == "Agar.io":
             return render(request, 'games/agar.html', {'game_room': game_room})
-        elif game.slug == "Snake":
+        elif game.slug == "snake":
             players_with_scores = []
             for player in game_room.players.all():
                 # Get the player's status and score from the PlayerStatus model
@@ -109,5 +109,29 @@ def start_game(request, room_code, game_id):
         return HttpResponseNotFound("Game not found.")
 
 
-def chess(request,room_code):
-    pass
+from django.shortcuts import render
+from .models import GameRoom
+
+def chess(request, room_code):
+    try:
+        # Fetch the game room by the room code
+        game_room = GameRoom.objects.get(room_code=room_code)
+        
+        # Check if the game room is active
+        if not game_room.is_active:
+            return redirect('game_lobby', room_code=room_code, game_id=game_room.game.game_id)
+        
+        return render(request, 'games/chess.html', {'game_room': game_room})
+    except GameRoom.DoesNotExist:
+        # Handle the case where the room does not exist
+        return HttpResponseNotFound("Game room not found.")
+
+
+def snake(request, room_code):
+    try:
+        game_room = GameRoom.objects.get(room_code=room_code)
+        if not game_room.is_active:
+            return redirect('game_lobby', room_code=room_code, game_id=game_room.game.game_id)
+        return render(request, 'games/snake.html', {'game_room': game_room})
+    except GameRoom.DoesNotExist:
+        return HttpResponseNotFound("Game room not found.")
