@@ -207,3 +207,147 @@ class SnakeGameConsumer(AsyncWebsocketConsumer):
             "snake_data": event["snake_data"],
         }))
 
+
+
+import json
+from channels.generic.websocket import AsyncWebsocketConsumer
+from asgiref.sync import sync_to_async
+from .models import FootballPlayer, FootballRoom, FootballMatchScore
+
+# Game state
+game_state = {
+    "players": {},  # {player_id: {"x": x, "y": y, "team": "A/B", "score": 0}}
+    "ball": {"x": 400, "y": 300},
+    "scores": {"teamA": 0, "teamB": 0},
+}
+
+# football_game/consumers.py
+import json
+from channels.generic.websocket import AsyncWebsocketConsumer
+
+# Global game state (replace with a database or persistent store for production)
+game_state = {
+    "players": {},
+    "scores": {"teamA": 0, "teamB": 0},
+    "ball": {"x": 400, "y": 300},
+}
+
+class FootballGameConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        self.room_code = self.scope['url_route']['kwargs']['room_code']
+        self.room_group_name = f"football_{self.room_code}"
+
+        # Join the group
+        await self.channel_layer.group_add(self.room_group_name, self.channel_name)
+        await self.accept()
+
+        # Assign player ID and team
+        self.player_id = f"player_{self.channel_name}"
+        self.team = "A" if len(game_state["players"]) % 2 == 0 else "B"
+        game_state["players"][self.player_id] = {
+            "x": 100, "y": 100,
+            "team": self.team,
+        }
+
+        # Send initial state to the player
+        await self.send(text_data=json.dumps({
+            "type": "assign_player_id",
+            "player_id": self.player_id,
+            "game_state": game_state
+        }))
+        await self.broadcast_game_state()
+
+    async def disconnect(self, close_code):
+        # Remove player from game state
+        if self.player_id in game_state["players"]:
+            del game_state["players"][self.player_id]
+
+        # Leave the group
+        await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+        await self.broadcast_game_state()
+
+    async def receive(self, text_data):
+        data = json.loads(text_data)
+        action = data.get('type')
+
+        if action == "chat_message":
+            await self.handle_chat_message(data)
+        elif action == "player_move":
+            await self.update_player_position(data)
+        elif action == "goal_scored":
+            await self.update_score(data)
+        elif action == "reaction":
+            await self.broadcast_reaction(data)
+
+    async def handle_chat_message(self, data):
+        message = data.get("message")
+        player_name = self.player_id
+
+        # Broadcast message to group
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                "type": "chat_message",
+                "player_name": player_name,
+                "message": message
+            }
+        )
+
+    async def update_player_position(self, data):
+        movement = data.get('movement', {})
+        player = game_state["players"].get(self.player_id)
+        if player:
+            player["x"] += movement.get("x", 0) * 5
+            player["y"] += movement.get("y", 0) * 5
+
+        await self.broadcast_game_state()
+
+    async def update_score(self, data):
+        team = data.get("team")
+        if team in game_state["scores"]:
+            game_state["scores"][f"team{team}"] += 1
+            game_state["ball"] = {"x": 400, "y": 300}
+
+        await self.broadcast_game_state()
+
+    async def broadcast_reaction(self, data):
+        reaction = data.get("reaction")
+        player_name = self.player_id
+
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                "type": "reaction",
+                "player_name": player_name,
+                "reaction": reaction
+            }
+        )
+
+    async def broadcast_game_state(self):
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                "type": "game_state_update",
+                "game_state": game_state
+            }
+        )
+
+    async def game_state_update(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "game_state_update",
+            "game_state": event["game_state"]
+        }))
+
+    async def chat_message(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "chat_message",
+            "player_name": event["player_name"],
+            "message": event["message"]
+        }))
+
+    async def reaction(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "reaction",
+            "player_name": event["player_name"],
+            "reaction": event["reaction"]
+        }))

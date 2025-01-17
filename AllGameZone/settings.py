@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'accounts',
     'games',
     'channels',
+    'earn_money',
     
 
 ]

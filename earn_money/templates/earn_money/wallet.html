@@ -1,0 +1,9 @@
+<h1>Your Wallet</h1>
+<p>Balance: {{ wallet.balance }}</p>
+<h2>Transactions</h2>
+<ul>
+    {% for transaction in transactions %}
+        <li>{{ transaction.timestamp }} - {{ transaction.amount }}</li>
+    {% endfor %}
+</ul>
+<a href="{% url 'withdraw' %}">Withdraw</a>

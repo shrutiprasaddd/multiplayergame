@@ -1,0 +1,8 @@
+<h1>Videos</h1>
+{% for video in videos %}
+    <div>
+        <h2>{{ video.title }}</h2>
+        <a href="{{ video.url }}">Watch</a>
+        <a href="{% url 'watch_video' video.id %}">Claim Reward</a>
+    </div>
+{% endfor %}

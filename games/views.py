@@ -88,6 +88,8 @@ def start_game(request, room_code, game_id):
             return render(request, 'games/chess.html', {'game_room': game_room})
         elif game.slug == "Agar.io":
             return render(request, 'games/agar.html', {'game_room': game_room})
+        elif game.slug == "football":
+            return render(request, 'games/football.html', {'game_room': game_room})
         elif game.slug == "snake":
             players_with_scores = []
             for player in game_room.players.all():
@@ -135,3 +137,7 @@ def snake(request, room_code):
         return render(request, 'games/snake.html', {'game_room': game_room})
     except GameRoom.DoesNotExist:
         return HttpResponseNotFound("Game room not found.")
+
+
+def football(request,room_code):
+    pass
