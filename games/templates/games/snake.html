@@ -14,11 +14,11 @@
         }
         canvas {
             display: block;
-            margin: auto;
-            background: linear-gradient(45deg, #111, #222);
+            position: absolute;
+            background: transparent;
         }
         #scoreboard {
-            position: absolute;
+            position: fixed;
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
@@ -61,23 +61,36 @@
         const roomCode = prompt("Enter Room Code:");
         const ws = new WebSocket(`ws://${window.location.host}/ws/snake-game/${roomCode}/`);
 
-        // Canvas setup with larger grid
+        // Canvas setup
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
-        const GRID_SIZE = 40; // 40x40 grid
         const SQUARE_SIZE = 20;
-        canvas.width = GRID_SIZE * SQUARE_SIZE;
-        canvas.height = GRID_SIZE * SQUARE_SIZE;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
 
         // Game variables
-        let snake = [{ x: 200, y: 200 }];
+        let snake = [{ x: 0, y: 0 }]; // Starting at origin
         let direction = "RIGHT";
         let snakes = {};
-        let foods = []; // Multiple food items
+        let foods = [];
         let score = 0;
-        let particles = []; // Particle effects
-        let backgroundOffsetX = 0; // For moving background
-        let backgroundOffsetY = 0; // For moving background
+        let particles = [];
+        let cameraX = 0;
+        let cameraY = 0;
+        let stars = []; // For dynamic background
+
+        // Initialize stars for background
+        function initStars() {
+            for (let i = 0; i < 200; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width * 2 - canvas.width,
+                    y: Math.random() * canvas.height * 2 - canvas.height,
+                    size: Math.random() * 3 + 1,
+                    speed: Math.random() * 0.5 + 0.1
+                });
+            }
+        }
+        initStars();
 
         // WebSocket handlers
         ws.onopen = () => console.log("Connected to Snake Game WebSocket.");
@@ -129,7 +142,7 @@
         function drawParticles() {
             particles.forEach(p => {
                 ctx.beginPath();
-                ctx.arc(p.x, p.y, 3 * p.life, 0, Math.PI * 2);
+                ctx.arc(p.x - cameraX, p.y - cameraY, 3 * p.life, 0, Math.PI * 2);
                 ctx.fillStyle = `rgba(255, 255, 0, ${p.life})`;
                 ctx.fill();
             });
@@ -137,10 +150,10 @@
 
         // Enhanced food system
         function spawnFood() {
-            if (foods.length < 5) {
+            while (foods.length < 10) { // Ensure minimum 10 food items
                 const food = {
-                    x: Math.floor(Math.random() * GRID_SIZE) * SQUARE_SIZE,
-                    y: Math.floor(Math.random() * GRID_SIZE) * SQUARE_SIZE,
+                    x: snake[0].x + (Math.random() * canvas.width - canvas.width/2),
+                    y: snake[0].y + (Math.random() * canvas.height - canvas.height/2),
                     pulseSize: 1,
                     pulseGrowing: true
                 };
@@ -150,7 +163,6 @@
 
         function drawFood() {
             foods.forEach(food => {
-                // Pulse effect
                 if (food.pulseGrowing) {
                     food.pulseSize += 0.05;
                     if (food.pulseSize >= 1.2) food.pulseGrowing = false;
@@ -159,18 +171,17 @@
                     if (food.pulseSize <= 0.8) food.pulseGrowing = true;
                 }
 
-                // Glow effect
                 const gradient = ctx.createRadialGradient(
-                    food.x + SQUARE_SIZE/2, food.y + SQUARE_SIZE/2, 0,
-                    food.x + SQUARE_SIZE/2, food.y + SQUARE_SIZE/2, SQUARE_SIZE
+                    food.x - cameraX + SQUARE_SIZE/2, food.y - cameraY + SQUARE_SIZE/2, 0,
+                    food.x - cameraX + SQUARE_SIZE/2, food.y - cameraY + SQUARE_SIZE/2, SQUARE_SIZE
                 );
                 gradient.addColorStop(0, 'red');
                 gradient.addColorStop(1, 'rgba(255,0,0,0)');
                 
                 ctx.fillStyle = gradient;
                 ctx.fillRect(
-                    food.x - (SQUARE_SIZE * food.pulseSize - SQUARE_SIZE)/2,
-                    food.y - (SQUARE_SIZE * food.pulseSize - SQUARE_SIZE)/2,
+                    food.x - cameraX - (SQUARE_SIZE * food.pulseSize - SQUARE_SIZE)/2,
+                    food.y - cameraY - (SQUARE_SIZE * food.pulseSize - SQUARE_SIZE)/2,
                     SQUARE_SIZE * food.pulseSize,
                     SQUARE_SIZE * food.pulseSize
                 );
@@ -181,8 +192,8 @@
             Object.values(snakes).forEach((playerSnake, playerIndex) => {
                 playerSnake.forEach((segment, index) => {
                     const gradient = ctx.createRadialGradient(
-                        segment.x + SQUARE_SIZE/2, segment.y + SQUARE_SIZE/2, 0,
-                        segment.x + SQUARE_SIZE/2, segment.y + SQUARE_SIZE/2, SQUARE_SIZE
+                        segment.x - cameraX + SQUARE_SIZE/2, segment.y - cameraY + SQUARE_SIZE/2, 0,
+                        segment.x - cameraX + SQUARE_SIZE/2, segment.y - cameraY + SQUARE_SIZE/2, SQUARE_SIZE
                     );
                     
                     if (index === 0) {
@@ -194,7 +205,7 @@
                     }
                     
                     ctx.fillStyle = gradient;
-                    ctx.fillRect(segment.x, segment.y, SQUARE_SIZE, SQUARE_SIZE);
+                    ctx.fillRect(segment.x - cameraX, segment.y - cameraY, SQUARE_SIZE, SQUARE_SIZE);
                 });
             });
         }
@@ -209,16 +220,14 @@
             }[direction];
             
             Object.entries(moves).forEach(([key, value]) => head[key] = (head[key] || 0) + value);
-
             snake.unshift(head);
 
-            // Update background offset based on snake's movement
-            backgroundOffsetX += moves.x || 0;
-            backgroundOffsetY += moves.y || 0;
+            // Camera follows snake
+            cameraX = head.x - canvas.width / 2;
+            cameraY = head.y - canvas.height / 2;
 
-            // Check food collision
             const foodIndex = foods.findIndex(food => 
-                head.x === food.x && head.y === food.y
+                Math.abs(head.x - food.x) < SQUARE_SIZE && Math.abs(head.y - food.y) < SQUARE_SIZE
             );
 
             if (foodIndex !== -1) {
@@ -226,42 +235,42 @@
                 score += 10;
                 document.getElementById("score").innerText = score;
                 addParticles(head.x, head.y);
-                spawnFood();
             } else {
                 snake.pop();
             }
-
-            // Wall collision
-            if (head.x < 0 || head.y < 0 || 
-                head.x >= canvas.width || head.y >= canvas.height) {
-                alert(`Game Over! Final Score: ${score}`);
-                ws.close();
-                location.reload();
-            }
+            spawnFood(); // Ensure food availability
         }
 
         function drawBackground() {
-            // Create moving background pattern based on player’s POV
-            const time = Date.now() * 0.001;
-            ctx.fillStyle = `hsl(${(time + backgroundOffsetX * 0.05) % 360}, 70%, 5%)`;
+            ctx.fillStyle = '#0a0a23';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Grid lines
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-            ctx.lineWidth = 1;
-            
-            for (let i = 0; i <= GRID_SIZE; i++) {
-                const pos = i * SQUARE_SIZE;
+            // Dynamic starry background
+            stars.forEach(star => {
+                star.x += star.speed * (snake[0].x - cameraX) * 0.01;
+                star.y += star.speed * (snake[0].y - cameraY) * 0.01;
+
+                // Wrap stars around
+                if (star.x - cameraX < -canvas.width) star.x += canvas.width * 2;
+                if (star.x - cameraX > canvas.width) star.x -= canvas.width * 2;
+                if (star.y - cameraY < -canvas.height) star.y += canvas.height * 2;
+                if (star.y - cameraY > canvas.height) star.y -= canvas.height * 2;
+
                 ctx.beginPath();
-                ctx.moveTo(pos - backgroundOffsetX % canvas.width, 0);
-                ctx.lineTo(pos - backgroundOffsetX % canvas.width, canvas.height);
-                ctx.stroke();
-                
-                ctx.beginPath();
-                ctx.moveTo(0, pos - backgroundOffsetY % canvas.height);
-                ctx.lineTo(canvas.width, pos - backgroundOffsetY % canvas.height);
-                ctx.stroke();
-            }
+                ctx.arc(star.x - cameraX, star.y - cameraY, star.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 255, 255, ${Math.sin(Date.now() * 0.001 + star.x) * 0.5 + 0.5})`;
+                ctx.fill();
+            });
+
+            // Add subtle nebula effect
+            const nebulaGradient = ctx.createRadialGradient(
+                canvas.width/2, canvas.height/2, 0,
+                canvas.width/2, canvas.height/2, canvas.width
+            );
+            nebulaGradient.addColorStop(0, 'rgba(100, 0, 255, 0.1)');
+            nebulaGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = nebulaGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
         function broadcastSnake() {
@@ -283,6 +292,12 @@
             moveSnake();
             broadcastSnake();
         }
+
+        // Resize handler
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
 
         // Game loop interval
         setInterval(gameLoop, 1000 / 15); // 15 FPS

@@ -1,558 +1,580 @@
 <!DOCTYPE html>
 <html lang="en">
-
-
-
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Multiplayer Chess</title>
-  <style>
-      body {
-          font-family: Arial, sans-serif;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          min-height: 100vh;
-          margin: 0;
-          background-color: #f4f4f4;
-      }
-
-
-
-
-      h1 {
-          margin-bottom: 20px;
-      }
-
-
-
-
-      .board {
-          display: grid;
-          grid-template-columns: repeat(8, 50px);
-          grid-template-rows: repeat(8, 50px);
-          gap: 0;
-          margin-bottom: 20px;
-      }
-
-
-
-
-      .square {
-          width: 50px;
-          height: 50px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 24px;
-          cursor: pointer;
-      }
-
-
-
-
-      .light {
-          background-color: #f0d9b5;
-      }
-
-
-
-
-      .dark {
-          background-color: #b58863;
-      }
-
-
-
-
-      .selected {
-          outline: 2px solid yellow;
-      }
-
-
-
-
-      .chat {
-          width: 400px;
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-      }
-
-
-
-
-      .messages {
-          height: 200px;
-          overflow-y: auto;
-          padding: 10px;
-          border: 1px solid #ccc;
-          background: #fff;
-      }
-
-
-
-
-      .message-input {
-          display: flex;
-          gap: 10px;
-      }
-
-
-
-
-      .message-input input {
-          flex-grow: 1;
-          padding: 5px;
-          border: 1px solid #ccc;
-          border-radius: 4px;
-      }
-
-
-
-
-      .message-input button {
-          padding: 5px 10px;
-          border: none;
-          background-color: #007bff;
-          color: white;
-          border-radius: 4px;
-          cursor: pointer;
-      }
-
-
-
-
-      .message-input button:hover {
-          background-color: #0056b3;
-      }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiplayer Chess</title>
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background-color: #f4f4f4; }
+        h1 { color: burlywood; margin-bottom: 20px; }
+        .game-container { display: flex; gap: 20px; }
+        .board { display: grid; grid-template-columns: repeat(8, 60px); grid-template-rows: repeat(8, 60px); border: 4px solid white; border-radius: 10px; background-color: #fff; }
+        .square { width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; font-size: 40px; cursor: pointer; user-select: none; }
+        .light { background-color: #f0d9b5; }
+        .dark { background-color: #b58863; }
+        .selected { outline: 3px solid yellow; }
+        .possible-move { background-color: rgba(255, 255, 0, 0.3); }
+        .sidebar { width: 300px; display: flex; flex-direction: column; gap: 15px; }
+        .chat { background-color: #fff; border-radius: 5px; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .messages { height: 150px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+        .message-input { display: flex; gap: 10px; }
+        .message-input input { flex: 1; padding: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        .message-input button { padding: 5px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .message-input button:hover { background-color: #0056b3; }
+        .clock { text-align: center; padding: 10px; background-color: #fff; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .game-over { font-size: 24px; color: red; margin-top: 20px; }
+    </style>
 </head>
-
-
-
-
 <body>
-  <h1>Multiplayer Chess</h1>
+    <h1>Multiplayer Chess</h1>
+    <div id="turn-indicator">Waiting for players...</div>
+    <div id="game-over" class="game-over"></div>
+    <div class="game-container">
+        <div id="board" class="board"></div>
+        <div class="sidebar">
+            <div class="chat">
+                <div id="messages" class="messages"></div>
+                <div class="message-input">
+                    <input id="chatInput" type="text" placeholder="Type a message...">
+                    <button id="sendButton">Send</button>
+                </div>
+            </div>
+            <div class="clock">
+                White: <span id="whiteTime">10:00</span><br>
+                Black: <span id="blackTime">10:00</span>
+            </div>
+        </div>
+    </div>
 
+    <script>
+        class ChessGame {
+            constructor() {
+                this.boardEl = document.getElementById('board');
+                this.messagesEl = document.getElementById('messages');
+                this.chatInput = document.getElementById('chatInput');
+                this.sendButton = document.getElementById('sendButton');
+                this.whiteTimeEl = document.getElementById('whiteTime');
+                this.blackTimeEl = document.getElementById('blackTime');
+                this.turnIndicator = document.getElementById('turn-indicator');
+                this.gameOverEl = document.getElementById('game-over');
 
+                this.pieceEmojis = {
+                    'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚', 'p': '♟',
+                    'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔', 'P': '♙'
+                };
 
+                this.initialBoard = [
+                    ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
+                    ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
+                    ['', '', '', '', '', '', '', ''],
+                    ['', '', '', '', '', '', '', ''],
+                    ['', '', '', '', '', '', '', ''],
+                    ['', '', '', '', '', '', '', ''],
+                    ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
+                    ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
+                ];
 
-  <div id="board" class="board"></div>
+                this.state = {
+                    board: JSON.parse(JSON.stringify(this.initialBoard)),
+                    selectedSquare: null,
+                    currentPlayer: 'white',
+                    playerColor: null,
+                    whiteTime: 600,
+                    blackTime: 600,
+                    moveCount: 0,
+                    lastCaptureOrPawnMove: 0,
+                    positionHistory: [],
+                    whiteKingMoved: false,
+                    blackKingMoved: false,
+                    whiteRooksMoved: { kingside: false, queenside: false },
+                    blackRooksMoved: { kingside: false, queenside: false },
+                    gameStarted: false,
+                    gameOver: false
+                };
 
+                this.socket = null;
+                this.clockInterval = null;
+            }
 
-
-
-  <div class="chat">
-      <h2>Chat</h2>
-      <div id="messages" class="messages"></div>
-      <div class="message-input">
-          <input id="chatInput" type="text" placeholder="Type a message...">
-          <button id="sendButton">Send</button>
-      </div>
-  </div>
-
-
-
-
-  <script>
-      const boardEl = document.getElementById('board');
-const messagesEl = document.getElementById('messages');
-const chatInput = document.getElementById('chatInput');
-const sendButton = document.getElementById('sendButton');
-
-const pieceEmojis = {
-   'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚', 'p': '♟',
-   'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔', 'P': '♙'
-};
-
-const initialBoard = [
-   ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
-   ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
-   ['', '', '', '', '', '', '', ''],
-   ['', '', '', '', '', '', '', ''],
-   ['', '', '', '', '', '', '', ''],
-   ['', '', '', '', '', '', '', ''],
-   ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
-   ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
-];
-
-let board = JSON.parse(JSON.stringify(initialBoard));
-let selectedSquare = null;
-let currentPlayer = 'white';
-let whiteTime = 450; // 7.5 minutes in seconds
-let blackTime = 450;
-let interval = null;
-let whiteKingMoved = false;
-let blackKingMoved = false;
-let whiteRooksMove = { kingside: false, queenside: false };
-let blackRooksMove = { kingside: false, queenside: false };
-
-// Function to add a message to the chat
-const addMessage = (message) => {
-    if (!messagesEl) return;
-    const messageElement = document.createElement('div');
-    messageElement.textContent = message;
-    messagesEl.appendChild(messageElement);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-};
-
-const renderBoard = () => {
-   boardEl.innerHTML = '';
-   board.forEach((row, rowIndex) => {
-       row.forEach((piece, colIndex) => {
-           const square = document.createElement('div');
-           square.classList.add('square', (rowIndex + colIndex) % 2 === 0 ? 'light' : 'dark');
-           square.textContent = pieceEmojis[piece] || '';
-           square.addEventListener('click', () => handleSquareClick(rowIndex, colIndex));
-           boardEl.appendChild(square);
-
-           if (selectedSquare && selectedSquare.row === rowIndex && selectedSquare.col === colIndex) {
-               square.classList.add('selected');
-           }
-       });
-   });
-};
-
-const updateClock = () => {
-   document.getElementById('whiteClock').textContent = `White: ${Math.floor(whiteTime / 60)}:${String(whiteTime % 60).padStart(2, '0')}`;
-   document.getElementById('blackClock').textContent = `Black: ${Math.floor(blackTime / 60)}:${String(blackTime % 60).padStart(2, '0')}`;
-};
-
-const startClock = () => {
-   interval = setInterval(() => {
-       if (currentPlayer === 'white') {
-           whiteTime--;
-       } else {
-           blackTime--;
-       }
-       updateClock();
-
-       if (whiteTime === 0 || blackTime === 0) {
-           clearInterval(interval);
-           alert(`${whiteTime === 0 ? 'Black' : 'White'} wins by timeout!`);
-       }
-   }, 1000);
-};
-
-const handleSquareClick = (row, col) => {
-   const piece = board[row][col];
-
-   // Check if it's the current player's turn
-   if (!selectedSquare) {
-       // Check if the selected piece belongs to the current player
-       if (piece &&
-           ((currentPlayer === 'white' && piece === piece.toUpperCase()) ||
-            (currentPlayer === 'black' && piece === piece.toLowerCase()))) {
-           selectedSquare = { row, col };
-       }
-   } else {
-       // Check if the same square is clicked again
-       if (selectedSquare.row === row && selectedSquare.col === col) {
-           selectedSquare = null;
-           renderBoard();
-           return;
-       }
-
-       // Check if another piece of the same color is clicked
-       if (piece && 
-           ((currentPlayer === 'white' && piece === piece.toUpperCase()) ||
-            (currentPlayer === 'black' && piece === piece.toLowerCase()))) {
-           selectedSquare = { row, col };
-           renderBoard();
-           return;
-       }
-
-       // Check if the move is valid and execute it
-       if (isValidMove(selectedSquare, { row, col })) {
-           const from = selectedSquare;
-           const to = { row, col };
-           const movingPiece = board[from.row][from.col];
-
-           // Track rook and king movements for castling
-           if (movingPiece === 'K') {
-               whiteKingMoved = true;
-               // Handle castling move for white
-               if (from.row === 7 && from.col === 4) {
-                   // Kingside castling
-                   if (to.row === 7 && to.col === 6) {
-                       board[7][5] = 'R'; // Move the rook
-                       board[7][7] = '';
-                   }
-                   // Queenside castling
-                   else if (to.row === 7 && to.col === 2) {
-                       board[7][3] = 'R'; // Move the rook
-                       board[7][0] = '';
-                   }
-               }
-           } else if (movingPiece === 'k') {
-               blackKingMoved = true;
-               // Handle castling move for black
-               if (from.row === 0 && from.col === 4) {
-                   // Kingside castling
-                   if (to.row === 0 && to.col === 6) {
-                       board[0][5] = 'r'; // Move the rook
-                       board[0][7] = '';
-                   }
-                   // Queenside castling
-                   else if (to.row === 0 && to.col === 2) {
-                       board[0][3] = 'r'; // Move the rook
-                       board[0][0] = '';
-                   }
-               }
-           } else if (movingPiece === 'R') {
-               if (from.row === 7 && from.col === 0) whiteRooksMove.queenside = true;
-               if (from.row === 7 && from.col === 7) whiteRooksMove.kingside = true;
-           } else if (movingPiece === 'r') {
-               if (from.row === 0 && from.col === 0) blackRooksMove.queenside = true;
-               if (from.row === 0 && from.col === 7) blackRooksMove.kingside = true;
-           }
-
-           // Handle pawn promotion
-           if ((movingPiece === 'P' && to.row === 0) || (movingPiece === 'p' && to.row === 7)) {
-               const promotion = prompt("Promote pawn to: Q (Queen), R (Rook), B (Bishop), N (Knight)").toUpperCase();
-               const validPromotions = ['Q', 'R', 'B', 'N'];
-               const promotedPiece = validPromotions.includes(promotion) ? 
-                   (currentPlayer === 'white' ? promotion : promotion.toLowerCase()) : 
-                   (currentPlayer === 'white' ? 'Q' : 'q');
-               board[to.row][to.col] = promotedPiece;
-           } else {
-               // Execute the regular move
-               board[to.row][to.col] = board[from.row][from.col];
-           }
-           board[from.row][from.col] = '';
-
-           // Create a move notation (e.g., "e2-e4")
-           const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-           const move = `${files[from.col]}${8-from.row}-${files[to.col]}${8-to.row}`;
-
-           // Clear selection and switch players
-           selectedSquare = null;
-           currentPlayer = currentPlayer === 'white' ? 'black' : 'white';
-
-           // Notify server of the move
-           sendMove(move);
-
-           // Render the updated board
-           renderBoard();
-       } else {
-           // Invalid move, clear selection
-           selectedSquare = null;
-       }
-   }
-
-   renderBoard();
-};
-
-const sendMove = (moveNotation) => {
-   const payload = { type: 'move', move: moveNotation, board };
-   socket.send(JSON.stringify(payload));
-};
-
-sendButton.addEventListener('click', () => {
-   const message = chatInput.value.trim();
-   if (message) {
-       const payload = { type: 'chat_message', message };
-       socket.send(JSON.stringify(payload));
-       addMessage(`You: ${message}`);
-       chatInput.value = '';
-   }
-});
-
-const socket = new WebSocket(`ws://127.0.0.1:8000/ws/game/${prompt('Enter Room Code')}/`);
-
-socket.onmessage = (event) => {
-   const data = JSON.parse(event.data);
-   if (data.type === 'chess_move_update') {
-       board = data.board;
-       currentPlayer = currentPlayer === 'white' ? 'black' : 'white';
-       renderBoard();
-       addMessage(`${data.player} made a move: ${data.move}`);
-   } else if (data.type === 'chat_message') {
-       addMessage(data.message);
-   }
-};
-
-const isValidMove = (from, to) => {
-    const piece = board[from.row][from.col];
-    const targetPiece = board[to.row][to.col];
-
-    // Check if destination is within board bounds
-    if (to.row < 0 || to.row >= 8 || to.col < 0 || to.col >= 8) return false;
-
-    // Check if piece belongs to current player
-    if ((currentPlayer === 'white' && piece.toLowerCase() === piece) ||
-        (currentPlayer === 'black' && piece.toUpperCase() === piece)) {
-        return false;
-    }
-
-    // Check if target square contains same color piece
-    if (targetPiece !== '' && 
-        ((currentPlayer === 'white' && targetPiece === targetPiece.toUpperCase()) ||
-         (currentPlayer === 'black' && targetPiece === targetPiece.toLowerCase()))) {
-        return false;
-    }
-
-    switch (piece.toLowerCase()) {
-        case 'p': // Pawn
-            return isValidPawnMove(from, to, piece, targetPiece);
-        case 'n': // Knight
-            return isValidKnightMove(from, to);
-        case 'b': // Bishop
-            return isValidBishopMove(from, to);
-        case 'r': // Rook
-            return isValidRookMove(from, to);
-        case 'q': // Queen
-            return isValidQueenMove(from, to);
-        case 'k': // King
-            return isValidKingMove(from, to, piece);
-        default:
-            return false;
-    }
-};
-
-const isValidPawnMove = (from, to, piece, targetPiece) => {
-    const direction = piece === piece.toUpperCase() ? -1 : 1; // White moves up (-1), Black moves down (+1)
-    const startRow = piece === piece.toUpperCase() ? 6 : 1; // Starting row for pawns
-    
-    // Normal move (one square forward)
-    if (from.col === to.col && targetPiece === '' && to.row === from.row + direction) {
-        return true;
-    }
-    
-    // Initial double move
-    if (from.col === to.col && targetPiece === '' && from.row === startRow && 
-        to.row === from.row + 2 * direction && board[from.row + direction][from.col] === '') {
-        return true;
-    }
-    
-    // Capture move (diagonal)
-    if (Math.abs(from.col - to.col) === 1 && targetPiece !== '' && to.row === from.row + direction) {
-        return true;
-    }
-    
-    // TODO: Add en passant rule if needed
-    
-    return false;
-};
-
-const isValidKnightMove = (from, to) => {
-    const rowDiff = Math.abs(from.row - to.row);
-    const colDiff = Math.abs(from.col - to.col);
-    return (rowDiff === 2 && colDiff === 1) || (rowDiff === 1 && colDiff === 2);
-};
-
-const isValidBishopMove = (from, to) => {
-    const rowDiff = Math.abs(from.row - to.row);
-    const colDiff = Math.abs(from.col - to.col);
-    return rowDiff === colDiff && !isPathBlocked(from, to);
-};
-
-const isValidRookMove = (from, to) => {
-    return ((from.row === to.row) !== (from.col === to.col)) && !isPathBlocked(from, to);
-};
-
-const isValidQueenMove = (from, to) => {
-    const rowDiff = Math.abs(from.row - to.row);
-    const colDiff = Math.abs(from.col - to.col);
-    
-    // Either diagonal move (like bishop) or straight move (like rook)
-    return ((rowDiff === colDiff) || (from.row === to.row) || (from.col === to.col)) && !isPathBlocked(from, to);
-};
-
-const isValidKingMove = (from, to, piece) => {
-    const rowDiff = Math.abs(from.row - to.row);
-    const colDiff = Math.abs(from.col - to.col);
-    
-    // Normal king move (one square in any direction)
-    if (rowDiff <= 1 && colDiff <= 1) {
-        return true;
-    }
-    
-    // Castling
-    if (rowDiff === 0 && colDiff === 2) {
-        // White king castling
-        if (piece === 'K' && from.row === 7 && from.col === 4) {
-            if (!whiteKingMoved) {
-                // Kingside castling
-                if (to.col === 6 && !whiteRooksMove.kingside && board[7][5] === '' && board[7][6] === '' && board[7][7] === 'R') {
-                    return !isKingInCheck('white') && !isSquareAttacked(7, 5, 'white') && !isSquareAttacked(7, 6, 'white');
+            init() {
+                if (!this.boardEl || !this.messagesEl || !this.chatInput || !this.sendButton || !this.turnIndicator || !this.gameOverEl) {
+                    console.error('Missing required DOM elements');
+                    return;
                 }
-                // Queenside castling
-                if (to.col === 2 && !whiteRooksMove.queenside && board[7][1] === '' && board[7][2] === '' && board[7][3] === '' && board[7][0] === 'R') {
-                    return !isKingInCheck('white') && !isSquareAttacked(7, 2, 'white') && !isSquareAttacked(7, 3, 'white');
+
+                this.setupEventListeners();
+                this.setupWebSocket();
+                this.renderBoard();
+            }
+
+            setupEventListeners() {
+                this.boardEl.addEventListener('click', (e) => {
+                    const square = e.target.closest('.square');
+                    if (square) {
+                        const row = parseInt(square.dataset.row);
+                        const col = parseInt(square.dataset.col);
+                        this.handleSquareClick(row, col);
+                    }
+                });
+
+                this.sendButton.addEventListener('click', () => this.sendChatMessage());
+                this.chatInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.sendChatMessage();
+                });
+            }
+
+            setupWebSocket() {
+                const roomCode = prompt('Enter Room Code') || 'default';
+                this.socket = new WebSocket(`ws://127.0.0.1:8000/ws/game/${roomCode}/`);
+
+                this.socket.onopen = () => {
+                    this.addMessage('Connected to server');
+                    this.socket.send(JSON.stringify({ type: 'join' }));
+                };
+
+                this.socket.onmessage = (event) => this.handleWebSocketMessage(event);
+                this.socket.onclose = () => {
+                    this.addMessage('Disconnected from server');
+                    this.stopClock();
+                };
+                this.socket.onerror = () => this.addMessage('Connection error');
+            }
+
+            updateTurnIndicator() {
+                if (!this.state.gameStarted || !this.state.playerColor) {
+                    this.turnIndicator.textContent = "Waiting for players...";
+                    this.boardEl.style.pointerEvents = 'none';
+                } else if (this.state.gameOver) {
+                    this.turnIndicator.textContent = "Game Over";
+                    this.boardEl.style.pointerEvents = 'none';
+                } else {
+                    this.turnIndicator.textContent = `${this.state.currentPlayer.charAt(0).toUpperCase() + this.state.currentPlayer.slice(1)}'s Turn` + 
+                        (this.state.playerColor === this.state.currentPlayer ? " (Your Turn)" : " (Opponent's Turn)");
+                    this.boardEl.style.pointerEvents = this.state.playerColor === this.state.currentPlayer ? 'auto' : 'none';
                 }
             }
-        }
-        // Black king castling
-        else if (piece === 'k' && from.row === 0 && from.col === 4) {
-            if (!blackKingMoved) {
-                // Kingside castling
-                if (to.col === 6 && !blackRooksMove.kingside && board[0][5] === '' && board[0][6] === '' && board[0][7] === 'r') {
-                    return !isKingInCheck('black') && !isSquareAttacked(0, 5, 'black') && !isSquareAttacked(0, 6, 'black');
+
+            renderBoard() {
+                this.boardEl.innerHTML = '';
+                this.state.board.forEach((row, rowIndex) => {
+                    row.forEach((piece, colIndex) => {
+                        const square = document.createElement('div');
+                        square.classList.add('square', (rowIndex + colIndex) % 2 === 0 ? 'light' : 'dark');
+                        square.textContent = this.pieceEmojis[piece] || '';
+                        square.dataset.row = rowIndex;
+                        square.dataset.col = colIndex;
+                        if (this.state.selectedSquare?.row === rowIndex && 
+                            this.state.selectedSquare?.col === colIndex) {
+                            square.classList.add('selected');
+                        }
+                        this.boardEl.appendChild(square);
+                    });
+                });
+                this.updateTurnIndicator();
+            }
+
+            handleSquareClick(row, col) {
+                if (this.state.gameOver) {
+                    this.addMessage("Game is over!");
+                    return;
                 }
-                // Queenside castling
-                if (to.col === 2 && !blackRooksMove.queenside && board[0][1] === '' && board[0][2] === '' && board[0][3] === '' && board[0][0] === 'r') {
-                    return !isKingInCheck('black') && !isSquareAttacked(0, 2, 'black') && !isSquareAttacked(0, 3, 'black');
+                if (!this.state.gameStarted) {
+                    this.addMessage("Game hasn't started yet!");
+                    return;
+                }
+                if (!this.state.playerColor) {
+                    this.addMessage("Waiting for player assignment...");
+                    return;
+                }
+                if (this.state.playerColor !== this.state.currentPlayer) {
+                    this.addMessage(`It's ${this.state.currentPlayer}'s turn`);
+                    return;
+                }
+
+                const piece = this.state.board[row][col];
+
+                if (!this.state.selectedSquare) {
+                    if (this.isPlayerPiece(piece)) {
+                        this.state.selectedSquare = { row, col };
+                        this.renderBoard();
+                    }
+                    return;
+                }
+
+                if (this.state.selectedSquare.row === row && this.state.selectedSquare.col === col) {
+                    this.state.selectedSquare = null;
+                    this.renderBoard();
+                    return;
+                }
+
+                if (this.isValidMove(this.state.selectedSquare, { row, col })) {
+                    this.makeMove(this.state.selectedSquare, { row, col });
+                } else {
+                    this.state.selectedSquare = null;
+                    this.renderBoard();
                 }
             }
-        }
-    }
-    
-    return false;
-};
 
-// Simplified check detection - this would need to be expanded for a full chess implementation
-const isKingInCheck = (player) => {
-    // Find the king position
-    let kingRow = -1, kingCol = -1;
-    const kingPiece = player === 'white' ? 'K' : 'k';
-    
-    for (let row = 0; row < 8; row++) {
-        for (let col = 0; col < 8; col++) {
-            if (board[row][col] === kingPiece) {
-                kingRow = row;
-                kingCol = col;
-                break;
+            makeMove(from, to) {
+                if (this.state.playerColor !== this.state.currentPlayer) {
+                    this.addMessage(`It's ${this.state.currentPlayer}'s turn`);
+                    return;
+                }
+
+                const tempBoard = JSON.parse(JSON.stringify(this.state.board));
+                const piece = tempBoard[from.row][from.col];
+                const targetPiece = tempBoard[to.row][to.col];
+
+                tempBoard[to.row][to.col] = piece;
+                tempBoard[from.row][from.col] = '';
+                this.handleSpecialMoves(from, to, piece, tempBoard);
+
+                if (this.isKingInCheck(this.state.currentPlayer, tempBoard)) {
+                    this.addMessage("Illegal move: King would be in check");
+                    this.state.selectedSquare = null;
+                    this.renderBoard();
+                    return;
+                }
+
+                this.state.board = tempBoard;
+                this.state.moveCount++;
+                if (piece.toLowerCase() === 'p' || targetPiece) {
+                    this.state.lastCaptureOrPawnMove = this.state.moveCount;
+                }
+                this.state.positionHistory.push(JSON.stringify(this.state.board));
+
+                const moveNotation = this.getMoveNotation(from, to);
+                this.sendMove(moveNotation);
+
+                this.state.selectedSquare = null;
+                this.renderBoard();
+                this.checkGameState();
+            }
+
+            isPlayerPiece(piece) {
+                if (!piece || !this.state.playerColor) return false;
+                return (this.state.playerColor === 'white' && piece === piece.toUpperCase()) ||
+                       (this.state.playerColor === 'black' && piece === piece.toLowerCase());
+            }
+
+            sendMove(moveNotation) {
+                if (this.socket?.readyState === WebSocket.OPEN) {
+                    this.socket.send(JSON.stringify({
+                        type: 'move',
+                        move: moveNotation,
+                        board: this.state.board,
+                        player: this.state.playerColor
+                    }));
+                } else {
+                    this.addMessage("Cannot send move: Not connected");
+                }
+            }
+
+            sendChatMessage() {
+                const message = this.chatInput.value.trim();
+                if (message && this.socket?.readyState === WebSocket.OPEN) {
+                    this.socket.send(JSON.stringify({
+                        type: 'chat_message',
+                        message: `${this.state.playerColor || 'Player'}: ${message}`
+                    }));
+                    this.addMessage(`${this.state.playerColor || 'Player'}: ${message}`);
+                    this.chatInput.value = '';
+                }
+            }
+
+            handleWebSocketMessage(event) {
+                const data = JSON.parse(event.data);
+                console.log("Received:", data);
+                switch (data.type) {
+                    case 'player_assignment':
+                        this.state.playerColor = data.color;
+                        this.addMessage(`You are playing as ${this.state.playerColor}`);
+                        this.renderBoard();
+                        break;
+                    case 'game_start':
+                        this.state.gameStarted = true;
+                        this.state.currentPlayer = data.current_player;
+                        this.addMessage('Game started!');
+                        this.startClock();
+                        this.renderBoard();
+                        break;
+                    case 'chess_move_update':
+                        this.state.board = data.board;
+                        this.state.currentPlayer = data.current_player;
+                        this.state.positionHistory.push(JSON.stringify(this.state.board));
+                        this.renderBoard();
+                        this.addMessage(`${data.player} moved: ${data.move}`);
+                        this.checkGameState();
+                        break;
+                    case 'chat_message':
+                        this.addMessage(data.message);
+                        break;
+                }
+            }
+
+            addMessage(message) {
+                const msg = document.createElement('div');
+                msg.textContent = message;
+                this.messagesEl.appendChild(msg);
+                this.messagesEl.scrollTop = this.messagesEl.scrollHeight;
+            }
+
+            startClock() {
+                this.stopClock();
+                this.clockInterval = setInterval(() => {
+                    if (this.state.gameOver) {
+                        this.stopClock();
+                        return;
+                    }
+                    if (this.state.currentPlayer === 'white') this.state.whiteTime--;
+                    else this.state.blackTime--;
+                    this.updateClock();
+                    if (this.state.whiteTime <= 0 || this.state.blackTime <= 0) {
+                        this.endGame(`${this.state.whiteTime <= 0 ? 'Black' : 'White'} wins by time!`);
+                    }
+                }, 1000);
+            }
+
+            stopClock() {
+                if (this.clockInterval) {
+                    clearInterval(this.clockInterval);
+                    this.clockInterval = null;
+                }
+            }
+
+            updateClock() {
+                const formatTime = (seconds) => {
+                    const mins = Math.floor(seconds / 60);
+                    const secs = seconds % 60;
+                    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+                };
+                this.whiteTimeEl.textContent = formatTime(this.state.whiteTime);
+                this.blackTimeEl.textContent = formatTime(this.state.blackTime);
+            }
+
+            isValidMove(from, to) {
+                const piece = this.state.board[from.row][from.col];
+                const targetPiece = this.state.board[to.row][to.col];
+
+                if (to.row < 0 || to.row >= 8 || to.col < 0 || to.col >= 8) return false;
+                if (targetPiece && this.isPlayerPiece(targetPiece)) return false;
+
+                switch (piece.toLowerCase()) {
+                    case 'p': return this.isValidPawnMove(from, to, piece, targetPiece);
+                    case 'n': return this.isValidKnightMove(from, to);
+                    case 'b': return this.isValidBishopMove(from, to);
+                    case 'r': return this.isValidRookMove(from, to);
+                    case 'q': return this.isValidQueenMove(from, to);
+                    case 'k': return this.isValidKingMove(from, to, piece);
+                    default: return false;
+                }
+            }
+
+            handleSpecialMoves(from, to, piece, board) {
+                if (piece === 'K') {
+                    this.state.whiteKingMoved = true;
+                    if (from.row === 7 && from.col === 4) {
+                        if (to.col === 6) { board[7][5] = 'R'; board[7][7] = ''; }
+                        if (to.col === 2) { board[7][3] = 'R'; board[7][0] = ''; }
+                    }
+                } else if (piece === 'k') {
+                    this.state.blackKingMoved = true;
+                    if (from.row === 0 && from.col === 4) {
+                        if (to.col === 6) { board[0][5] = 'r'; board[0][7] = ''; }
+                        if (to.col === 2) { board[0][3] = 'r'; board[0][0] = ''; }
+                    }
+                } else if (piece === 'R') {
+                    if (from.row === 7 && from.col === 0) this.state.whiteRooksMoved.queenside = true;
+                    if (from.row === 7 && from.col === 7) this.state.whiteRooksMoved.kingside = true;
+                } else if (piece === 'r') {
+                    if (from.row === 0 && from.col === 0) this.state.blackRooksMoved.queenside = true;
+                    if (from.row === 0 && from.col === 7) this.state.blackRooksMoved.kingside = true;
+                }
+
+                if ((piece === 'P' && to.row === 0) || (piece === 'p' && to.row === 7)) {
+                    const promotion = prompt('Promote to (Q/R/B/N):', 'Q').toUpperCase();
+                    board[to.row][to.col] = this.state.currentPlayer === 'white' ? 
+                        promotion : promotion.toLowerCase();
+                }
+            }
+
+            getMoveNotation(from, to) {
+                const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+                return `${files[from.col]}${8 - from.row}-${files[to.col]}${8 - to.row}`;
+            }
+
+            checkGameState() {
+                if (this.state.gameOver) return;
+
+                if (this.isKingMissing()) {
+                    const winner = this.state.currentPlayer === 'white' ? 'Black' : 'White';
+                    this.endGame(`${winner} wins: Opponent's king was captured!`);
+                    return;
+                }
+
+                if (this.isCheckmate()) {
+                    this.endGame(`${this.state.currentPlayer === 'white' ? 'Black' : 'White'} wins by checkmate!`);
+                } else if (this.isStalemate()) {
+                    this.endGame('Draw by stalemate!');
+                } else if (this.isFiftyMoveRule()) {
+                    this.endGame('Draw by 50-move rule!');
+                } else if (this.isThreefoldRepetition()) {
+                    this.endGame('Draw by threefold repetition!');
+                } else if (this.isKingInCheck(this.state.currentPlayer)) {
+                    this.addMessage(`${this.state.currentPlayer} is in check!`);
+                }
+            }
+
+            endGame(message) {
+                this.state.gameOver = true;
+                this.addMessage(message);
+                this.gameOverEl.textContent = message;
+                this.stopClock();
+                this.renderBoard(); // Updates turn indicator to "Game Over"
+            }
+
+            isKingMissing() {
+                let whiteKing = false;
+                let blackKing = false;
+                for (let row of this.state.board) {
+                    for (let piece of row) {
+                        if (piece === 'K') whiteKing = true;
+                        if (piece === 'k') blackKing = true;
+                    }
+                }
+                return !(whiteKing && blackKing);
+            }
+
+            isValidPawnMove(from, to, piece, targetPiece) {
+                const direction = piece === piece.toUpperCase() ? -1 : 1;
+                const startRow = piece === piece.toUpperCase() ? 6 : 1;
+
+                if (from.col === to.col && !targetPiece) {
+                    if (to.row === from.row + direction) return true;
+                    if (from.row === startRow && to.row === from.row + 2 * direction && 
+                        !this.state.board[from.row + direction][from.col]) return true;
+                }
+                if (Math.abs(from.col - to.col) === 1 && targetPiece && 
+                    to.row === from.row + direction) return true;
+                return false;
+            }
+
+            isValidKnightMove(from, to) {
+                const rowDiff = Math.abs(from.row - to.row);
+                const colDiff = Math.abs(from.col - to.col);
+                return (rowDiff === 2 && colDiff === 1) || (rowDiff === 1 && colDiff === 2);
+            }
+
+            isValidBishopMove(from, to) {
+                return Math.abs(from.row - to.row) === Math.abs(from.col - to.col) && 
+                       !this.isPathBlocked(from, to);
+            }
+
+            isValidRookMove(from, to) {
+                return (from.row === to.row || from.col === to.col) && !this.isPathBlocked(from, to);
+            }
+
+            isValidQueenMove(from, to) {
+                return (this.isValidRookMove(from, to) || this.isValidBishopMove(from, to));
+            }
+
+            isValidKingMove(from, to, piece) {
+                const rowDiff = Math.abs(from.row - to.row);
+                const colDiff = Math.abs(from.col - to.col);
+                if (rowDiff <= 1 && colDiff <= 1) return true;
+                if (rowDiff === 0 && colDiff === 2) return false; // Simplified castling
+                return false;
+            }
+
+            isPathBlocked(from, to) {
+                const rowStep = Math.sign(to.row - from.row);
+                const colStep = Math.sign(to.col - from.col);
+                let row = from.row + rowStep;
+                let col = from.col + colStep;
+
+                while (row !== to.row || col !== to.col) {
+                    if (this.state.board[row][col]) return true;
+                    row += rowStep;
+                    col += colStep;
+                }
+                return false;
+            }
+
+            isKingInCheck(player, board = this.state.board) {
+                const king = player === 'white' ? 'K' : 'k';
+                let kingPos = null;
+
+                for (let r = 0; r < 8; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        if (board[r][c] === king) {
+                            kingPos = { row: r, col: c };
+                            break;
+                        }
+                    }
+                    if (kingPos) break;
+                }
+
+                return kingPos && this.isSquareAttacked(kingPos.row, kingPos.col, player, board);
+            }
+
+            isSquareAttacked(row, col, player, board = this.state.board) {
+                const opponent = player === 'white' ? 'black' : 'white';
+                for (let r = 0; r < 8; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const piece = board[r][c];
+                        if (piece && ((opponent === 'white' && piece === piece.toUpperCase()) || 
+                                     (opponent === 'black' && piece === piece.toLowerCase()))) {
+                            if (this.isValidMove({ row: r, col: c }, { row, col })) return true;
+                        }
+                    }
+                }
+                return false;
+            }
+
+            isCheckmate() {
+                return this.isKingInCheck(this.state.currentPlayer) && !this.hasLegalMoves();
+            }
+
+            isStalemate() {
+                return !this.isKingInCheck(this.state.currentPlayer) && !this.hasLegalMoves();
+            }
+
+            hasLegalMoves() {
+                for (let r1 = 0; r1 < 8; r1++) {
+                    for (let c1 = 0; c1 < 8; c1++) {
+                        if (this.isPlayerPiece(this.state.board[r1][c1])) {
+                            for (let r2 = 0; r2 < 8; r2++) {
+                                for (let c2 = 0; c2 < 8; c2++) {
+                                    if (this.isValidMove({ row: r1, col: c1 }, { row: r2, col: c2 })) {
+                                        const tempBoard = JSON.parse(JSON.stringify(this.state.board));
+                                        tempBoard[r2][c2] = tempBoard[r1][c1];
+                                        tempBoard[r1][c1] = '';
+                                        if (!this.isKingInCheck(this.state.currentPlayer, tempBoard)) {
+                                            return true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            isFiftyMoveRule() {
+                return (this.state.moveCount - this.state.lastCaptureOrPawnMove) >= 50;
+            }
+
+            isThreefoldRepetition() {
+                const current = JSON.stringify(this.state.board);
+                return this.state.positionHistory.filter(pos => pos === current).length >= 3;
             }
         }
-        if (kingRow !== -1) break;
-    }
-    
-    return isSquareAttacked(kingRow, kingCol, player);
-};
 
-// Check if a square is under attack
-const isSquareAttacked = (row, col, player) => {
-    // For simple implementation, we'll skip this check
-    // A full implementation would check all opponent pieces to see if they can attack this square
-    return false;
-};
-
-const isPathBlocked = (from, to) => {
-    const rowDirection = to.row > from.row ? 1 : to.row < from.row ? -1 : 0;
-    const colDirection = to.col > from.col ? 1 : to.col < from.col ? -1 : 0;
-    let row = from.row + rowDirection;
-    let col = from.col + colDirection;
-
-    while (row !== to.row || col !== to.col) {
-        if (board[row][col] !== '') return true;
-        row += rowDirection;
-        col += colDirection;
-    }
-
-    return false;
-};
-
-renderBoard();
-startClock();
-  </script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const game = new ChessGame();
+            game.init();
+        });
+    </script>
 </body>
-
-
-
-
 </html>
