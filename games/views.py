@@ -4,13 +4,45 @@ from .models import Game, GameRoom, PlayerStatus
 from django.contrib.auth.models import User
 import uuid
 
+
+
+
+
+from django.shortcuts import render
+from django.http import JsonResponse
+from .models import Game, GameRoom
+import requests
+
+# PlayCanvas API Details
+PLAYCANVAS_API_KEY = "t9qRgISU2NQc2XmzzkvVCh6fh3maG4pP"
+PLAYCANVAS_API_URL = "https://playcanvas.com/api/projects"
+
+def fetch_playcanvas_games():
+    headers = {"Authorization": f"Bearer {PLAYCANVAS_API_KEY}"}
+    response = requests.get(PLAYCANVAS_API_URL, headers=headers)
+
+    if response.status_code == 200:
+        games = response.json()
+        free_games = [game for game in games if game.get("isPublic", False)]  # Filtering free games
+        return free_games  
+    return []
+
 def home(request):
     games = Game.objects.filter(is_active=True)
     for game in games:
-        # Get the count of active rooms for each game
         game.rooms = GameRoom.objects.filter(game=game, is_active=True).count()
 
-    return render(request, 'games/home.html', {'games': games})
+    playcanvas_games = fetch_playcanvas_games()  # ✅ Now this works without an error
+
+    return render(request, 'games/home.html', {'games': games, 'playcanvas_games': playcanvas_games})
+
+# def home(request):
+#     games = Game.objects.filter(is_active=True)
+#     for game in games:
+#         # Get the count of active rooms for each game
+#         game.rooms = GameRoom.objects.filter(game=game, is_active=True).count()
+
+#     return render(request, 'games/home.html', {'games': games})
 
 from django.views.decorators.csrf import csrf_exempt
 

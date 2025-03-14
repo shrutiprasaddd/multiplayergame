@@ -19,6 +19,8 @@ class Game(models.Model):
     max_players = models.IntegerField(default=100)
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
+    playcanvas_project_id = models.CharField(max_length=255, blank=True, null=True)  # Store PlayCanvas project ID
+    url = models.URLField(max_length=255, blank=True, null=True)  # Store game URL
 
 
     def __str__(self):

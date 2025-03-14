@@ -1,32 +1,137 @@
-{% extends 'games/index.html' %}
-<!-- {% block extra_css %}
-{% load static %}
-<link rel="stylesheet" href="{% static 'css/games/home.css' %}">
-{% endblock %} -->
-{% block content %}
-
-<div class="home-container">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Lobby - Play & Compete</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: 'Poppins', sans-serif;
+        }
+        .navbar {
+            background: linear-gradient(45deg, #000000, #007bff);
+            padding: 15px;
+        }
+        .navbar-brand {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ffffff !important;
+        }
+        .game-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-radius: 15px;
+            overflow: hidden;
+            background: #1e1e1e;
+            color: #ffffff;
+        }
+        .game-card:hover {
+            transform: scale(1.08);
+            box-shadow: 0 8px 20px rgba(255, 255, 255, 0.2);
+        }
+        .container {
+            margin-top: 50px;
+        }
+        h1 {
+            color: #00c3ff;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 8px rgba(0, 195, 255, 0.5);
+            text-align: center;
+        }
+        .game-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        .btn {
+            transition: all 0.3s ease-in-out;
+        }
+        .btn:hover {
+            transform: scale(1.1);
+        }
+        footer {
+            background: #000000;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            margin-top: 50px;
+        }
+        .ad-space {
+            text-align: center;
+            margin: 30px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header/Navbar -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="#">Game Lobby</a>
+        </div>
+    </nav>
     
-    
-    <h2 class="home-heading">Welcome to the Game Platform</h2>
-    <p class="home-description">Choose your favorite game and get started!</p>
-
-    <div class="game-list">
-        {% for game in games %}
-            <div class="game-card">
-                <img src="{{ game.image.url }}" alt="{{ game.name }} logo" class="game-image">
-                <h3 class="game-title">{{ game.name }}</h3>
-                <p class="game-description">{{ game.description }}</p>
-                <p class="game-id">{{game.game_id}}</p>
-                <a href="{% url 'game_room_views' game.game_id %}" class="btn btn-primary join-room">
-                    Manage Room
-                </a>
-                
-                
-
-
-            </div>
-        {% endfor %}
+    <div class="container">
+        <h1>Discover & Play Top Games</h1>
+        
+        <!-- Google AdSense Placeholder -->
+        <div class="ad-space">
+            <p>Advertisement</p>
+            <!-- Replace with Google AdSense Code -->
+            <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+            <ins class="adsbygoogle"
+                 style="display:block"
+                 data-ad-client="ca-pub-XXXXXXXXXXXXXXX"
+                 data-ad-slot="XXXXXXXXXX"
+                 data-ad-format="auto"></ins>
+            <script>
+                (adsbygoogle = window.adsbygoogle || []).push({});
+            </script>
+        </div>
+        
+        <div class="row">
+            {% for game in games %}
+                <div class="col-md-4 mb-4">
+                    <div class="card game-card">
+                        {% if game.image %}
+                            <img src="{{ game.image.url }}" class="card-img-top game-image" alt="{{ game.name }}">
+                        {% else %}
+                            <img src="https://via.placeholder.com/300x200?text={{ game.name }}" class="card-img-top game-image" alt="{{ game.name }}">
+                        {% endif %}
+                        <div class="card-body text-center">
+                            <h5 class="card-title">{{ game.name }}</h5>
+                            <p class="card-text">Active Rooms: {{ game.rooms }}</p>
+                            {% if game.slug in 'snake,football,chess' %}
+                                <a href="{% url 'game_room_views' game.game_id %}" class="btn btn-primary">Play Now</a>
+                            {% elif game.playcanvas_project_id %}
+                                <a href="https://playcanv.as/p/{{ game.playcanvas_project_id }}" class="btn btn-success">Play Now</a>
+                            {% elif game.url%}
+                                <a href="{{ game.url }}" class="btn btn-info">Play Now</a>
+                            {% else %}
+                                <a href="#" class="btn btn-secondary disabled">No PlayCanvas URL</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12">
+                    <p class="text-muted text-center">No active games available.</p>
+                </div>
+            {% endfor %}
+        </div>
     </div>
-</div>
-{% endblock %}
+    
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2025 Game Lobby | Designed with ❤️</p>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
