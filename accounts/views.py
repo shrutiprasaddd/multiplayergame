@@ -23,5 +23,13 @@ class CustomLoginView(LoginView):
     template_name = 'accounts/login.html'
 
 
+from django.contrib.auth import logout
+from django.shortcuts import redirect
+
+def logout_view(request):
+    logout(request)
+    return redirect('login')  # Redirect to login page
+
+
 class CustomLogoutView(LogoutView):
     template_name = 'accounts/logout.html'
