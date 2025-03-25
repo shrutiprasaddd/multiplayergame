@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     {% load static %}
     <meta charset="UTF-8">
@@ -9,31 +8,212 @@
 
     <link rel="stylesheet" href="{% static 'css/games/home.css' %}">
     <link rel="stylesheet" href="{% static 'css/games/index.css' %}">
-    
-    
-    
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&family=Poppins:wght@300;400&display=swap" rel="stylesheet">
     <meta name="description" content="A platform for online multiplayer games, including Snake, Agar.io, Chess, and more. Join now!">
     <meta name="keywords" content="games, multiplayer, online, Snake, Agar.io, Chess">
+
+    <style>
+        /* Base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background: #f0f2f5;
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header styles */
+        .main-header {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            padding: 1.5rem 0;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 500;
+            color: #fff;
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Desktop navigation */
+        .desktop-nav ul {
+            display: flex;
+            list-style: none;
+            gap: 30px;
+        }
+
+        .desktop-nav a {
+            color: white;
+            text-decoration: none;
+            font-size: 1.1rem;
+            padding: 8px 16px;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .desktop-nav a:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        /* Sidebar for mobile */
+        .sidebar {
+            height: 100%;
+            width: 0;
+            position: fixed;
+            z-index: 1001;
+            top: 0;
+            left: 0;
+            background: linear-gradient(180deg, #2a5298, #1e3c72);
+            overflow-x: hidden;
+            transition: width 0.4s ease-in-out;
+            padding-top: 70px;
+            box-shadow: 4px 0 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .sidebar a {
+            padding: 15px 25px;
+            text-decoration: none;
+            font-size: 1.2rem;
+            color: white;
+            display: block;
+            transition: background 0.3s ease;
+        }
+
+        .sidebar a:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .menu-btn {
+            display: none;
+            font-size: 28px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            transition: transform 0.3s ease;
+        }
+
+        .menu-btn:hover {
+            transform: scale(1.1);
+        }
+
+        /* Main content */
+        .content-container {
+            margin-top: 90px;
+            flex: 1;
+            padding: 20px 0;
+        }
+
+        /* Footer */
+        .main-footer {
+            background: linear-gradient(135deg, #2a5298, #1e3c72);
+            color: white;
+            padding: 2rem 0;
+            box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .main-footer .social-links {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .main-footer .social-icon img {
+            width: 24px;
+            height: 24px;
+            transition: transform 0.3s ease;
+        }
+
+        .main-footer .social-icon:hover img {
+            transform: scale(1.2);
+        }
+
+        /* Media Queries */
+        @media (max-width: 768px) {
+            .desktop-nav {
+                display: none;
+            }
+
+            .menu-btn {
+                display: block;
+            }
+
+            .content-container {
+                margin-top: 70px;
+            }
+
+            .logo {
+                font-size: 1.5rem;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .sidebar {
+                display: none;
+            }
+        }
+    </style>
 </head>
 
 <body>
     <header class="main-header">
         <div class="container">
-            <h1><a href="{% url 'home' %}" class="logo">Game Platform</a></h1>
-            <nav class="nav-bar">
-                <ul>
-                    <li><a href="{% url 'home' %}" class="nav-link">Home</a></li>
-                    {% if not user.is_authenticated %}
-                    <li><a href="{% url 'signup' %}" class="nav-link">Signup</a></li>
-                    <li><a href="{% url 'login' %}" class="nav-link">Login</a></li>
-                    {% else %}
-                    <li><a href="{% url 'logout' %}" class="nav-link">Logout</a></li>
-                    {% endif %}
-                </ul>
-            </nav>
+            <div class="header-content">
+                <h1><a href="{% url 'home' %}" class="logo">Game Platform</a></h1>
+                <button class="menu-btn" onclick="toggleNav()">☰</button>
+                <nav class="desktop-nav">
+                    <ul>
+                        <li><a href="{% url 'home' %}" class="nav-link">Home</a></li>
+                        {% if not user.is_authenticated %}
+                        <li><a href="{% url 'signup' %}" class="nav-link">Signup</a></li>
+                        <li><a href="{% url 'login' %}" class="nav-link">Login</a></li>
+                        {% else %}
+                        <li><a href="{% url 'logout' %}" class="nav-link">Logout</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
         </div>
     </header>
+
+    <div id="sidebar" class="sidebar">
+        <a href="{% url 'home' %}">Home</a>
+        {% if not user.is_authenticated %}
+        <a href="{% url 'signup' %}">Signup</a>
+        <a href="{% url 'login' %}">Login</a>
+        {% else %}
+        <a href="{% url 'logout' %}">Logout</a>
+        {% endif %}
+    </div>
 
     <main class="content-container">
         <div class="container">
@@ -54,9 +234,24 @@
         </div>
     </footer>
 
+    <script>
+        function toggleNav() {
+            const sidebar = document.getElementById("sidebar");
+            sidebar.style.width = sidebar.style.width === "280px" ? "0" : "280px";
+        }
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById("sidebar");
+            const menuBtn = document.querySelector('.menu-btn');
+            if (window.innerWidth <= 768 && !sidebar.contains(event.target) && !menuBtn.contains(event.target)) {
+                sidebar.style.width = "0";
+            }
+        });
+    </script>
+
     {% block extra_js %}
     <!-- Additional JavaScript files can be added here -->
     {% endblock %}
 </body>
-
 </html>

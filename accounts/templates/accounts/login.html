@@ -1,14 +1,361 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #0f172a, #1e293b); /* Dark blue gradient */
+            overflow: hidden;
+            perspective: 1000px;
+        }
+
+        /* 3D Floating Shapes Background */
+        .bg-shapes {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .shape {
+            position: absolute;
+            opacity: 0.3;
+            filter: blur(1px);
+            animation: float 15s infinite linear;
+        }
+
+        .shape:nth-child(1) {
+            background: linear-gradient(45deg, #6366f1, #8b5cf6);
+            width: 150px;
+            height: 150px;
+            border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+            top: 20%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+
+        .shape:nth-child(2) {
+            background: linear-gradient(45deg, #ec4899, #f43f5e);
+            width: 200px;
+            height: 200px;
+            border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+            top: 60%;
+            left: 70%;
+            animation-delay: 2s;
+        }
+
+        .shape:nth-child(3) {
+            background: linear-gradient(45deg, #10b981, #06b6d4);
+            width: 180px;
+            height: 180px;
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            top: 30%;
+            left: 60%;
+            animation-delay: 4s;
+        }
+
+        .shape:nth-child(4) {
+            background: linear-gradient(45deg, #f59e0b, #f97316);
+            width: 120px;
+            height: 120px;
+            border-radius: 40% 60% 60% 40% / 70% 50% 50% 30%;
+            top: 70%;
+            left: 20%;
+            animation-delay: 6s;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(0) rotate(0deg) translateZ(0);
+            }
+            25% {
+                transform: translateY(-50px) rotate(5deg) translateZ(20px);
+            }
+            50% {
+                transform: translateY(0) rotate(10deg) translateZ(0);
+            }
+            75% {
+                transform: translateY(50px) rotate(5deg) translateZ(-20px);
+            }
+            100% {
+                transform: translateY(0) rotate(0deg) translateZ(0);
+            }
+        }
+
+        /* Subtle particle effect */
+        .particles {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.2;
+        }
+
+        .particle {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: particle-float linear infinite;
+        }
+
+        @keyframes particle-float {
+            to {
+                transform: translateY(-100vh);
+            }
+        }
+
+        .login-container {
+            background: rgba(15, 23, 42, 0.8); /* Dark semi-transparent */
+            backdrop-filter: blur(15px);
+            border-radius: 16px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3),
+                        0 0 0 1px rgba(255, 255, 255, 0.05),
+                        0 0 30px rgba(99, 102, 241, 0.3); /* Subtle glow */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transform-style: preserve-3d;
+            transition: all 0.5s ease;
+        }
+
+        .login-container:hover {
+            transform: translateY(-5px) rotateX(1deg) rotateY(1deg);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4),
+                        0 0 0 1px rgba(255, 255, 255, 0.1),
+                        0 0 40px rgba(99, 102, 241, 0.4);
+        }
+
+        h2 {
+            color: #e2e8f0;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 1.8rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            position: relative;
+        }
+
+        h2::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 3px;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+            border-radius: 3px;
+        }
+
+        .form-group {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px 20px;
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            background: rgba(30, 41, 59, 0.9);
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .form-group label {
+            position: absolute;
+            top: 50%;
+            left: 20px;
+            transform: translateY(-50%);
+            color: rgba(226, 232, 240, 0.7);
+            pointer-events: none;
+            transition: all 0.3s ease;
+            background: rgba(15, 23, 42, 0.8);
+            padding: 0 5px;
+        }
+
+        .form-group input:focus + label,
+        .form-group input:not(:placeholder-shown) + label {
+            top: 0;
+            left: 15px;
+            font-size: 0.8rem;
+            color: #a5b4fc;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* Floating animation for the container */
+        @keyframes float-container {
+            0% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+            100% {
+                transform: translateY(0px);
+            }
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 25px;
+                margin: 20px;
+                animation: float-container 6s ease-in-out infinite;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            .form-group input {
+                padding: 12px 15px;
+            }
+
+            button {
+                padding: 12px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h2>Login</h2>
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Login</button>
-    </form>
+    <div class="bg-shapes">
+        <div class="shape"></div>
+        <div class="shape"></div>
+        <div class="shape"></div>
+        <div class="shape"></div>
+    </div>
+    
+    <div class="particles" id="particles"></div>
+    
+    <div class="login-container">
+        <h2>Welcome Back</h2>
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                {{ form.username }}
+                <label for="{{ form.username.id_for_label }}">Username</label>
+            </div>
+            <div class="form-group">
+                {{ form.password }}
+                <label for="{{ form.password.id_for_label }}">Password</label>
+            </div>
+            <button type="submit">Login</button>
+        </form>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Create particles
+            const particlesContainer = document.getElementById('particles');
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.classList.add('particle');
+                
+                // Random properties
+                const size = Math.random() * 3 + 1;
+                const posX = Math.random() * 100;
+                const duration = Math.random() * 20 + 10;
+                const delay = Math.random() * 10;
+                
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                particle.style.left = `${posX}%`;
+                particle.style.bottom = '-10px';
+                particle.style.opacity = Math.random() * 0.5 + 0.1;
+                particle.style.animationDuration = `${duration}s`;
+                particle.style.animationDelay = `${delay}s`;
+                
+                particlesContainer.appendChild(particle);
+            }
+            
+            // 3D tilt effect
+            const container = document.querySelector('.login-container');
+            document.addEventListener('mousemove', (e) => {
+                const xAxis = (window.innerWidth / 2 - e.pageX) / 25;
+                const yAxis = (window.innerHeight / 2 - e.pageY) / 25;
+                container.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
+            });
+            
+            // Reset position when mouse leaves
+            document.addEventListener('mouseleave', () => {
+                container.style.transform = 'rotateY(0deg) rotateX(0deg)';
+            });
+            
+            // Initial animation
+            container.style.opacity = '0';
+            container.style.transform = 'translateY(20px) scale(0.95)';
+            setTimeout(() => {
+                container.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                container.style.opacity = '1';
+                container.style.transform = 'translateY(0) scale(1)';
+            }, 100);
+        });
+    </script>
 </body>
 </html>
