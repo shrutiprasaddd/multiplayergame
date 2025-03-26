@@ -44,12 +44,59 @@ def home(request):
 
 #     return render(request, 'games/home.html', {'games': games})
 
+# from django.views.decorators.csrf import csrf_exempt
+
+# @csrf_exempt
+# def game_room_views(request, game_id):
+#     game = Game.objects.get(game_id=game_id)
+    
+#     if request.method == 'POST':
+#         action = request.POST.get('action')
+        
+#         if action == 'create':
+#             room_type = request.POST.get('room_type', 'public')  # Default to 'public'
+            
+#             # Create a new room with the selected visibility type
+#             room = GameRoom.objects.create(
+#                 game=game,
+#                 created_by=request.user,
+#                 room_code=str(uuid.uuid4())[:8].upper(),  # Ensure the room code is uppercase
+#                 is_private=(room_type == 'private')
+#             )
+#             room.players.add(request.user)  # Add the host as a player
+#             room.save()
+            
+#             # Return JSON response with room code
+#             return JsonResponse({'room_code': room.room_code})
+        
+#         elif action == 'join':
+#             room_code = request.POST.get('room_code', '').strip().upper()  # Normalize to uppercase
+#             try:
+#                 room = GameRoom.objects.get(room_code=room_code, game=game)
+#                 room.players.add(request.user)  # Add user to the room
+#                 room.save()
+#                 return JsonResponse({'room_code': room.room_code, 'game_id': game_id})
+#             except GameRoom.DoesNotExist:
+#                 return JsonResponse({'error': 'Invalid room code or room does not exist'}, status=400)
+    
+#     return render(request, 'games/game_room.html', {'game': game})
+
+
+
+
+from django.shortcuts import render
+from django.http import JsonResponse
+from .models import Game, GameRoom
 from django.views.decorators.csrf import csrf_exempt
+import uuid
 
 @csrf_exempt
 def game_room_views(request, game_id):
-    game = Game.objects.get(game_id=game_id)
-    
+    try:
+        game = Game.objects.get(game_id=game_id)
+    except Game.DoesNotExist:
+        return render(request, 'games/game_room.html', {'game': None, 'error': 'Game not found'})
+
     if request.method == 'POST':
         action = request.POST.get('action')
         
@@ -72,14 +119,21 @@ def game_room_views(request, game_id):
         elif action == 'join':
             room_code = request.POST.get('room_code', '').strip().upper()  # Normalize to uppercase
             try:
-                room = GameRoom.objects.get(room_code=room_code, game=game)
+                room = GameRoom.objects.get(room_code=room_code, game=game, is_active=True)
                 room.players.add(request.user)  # Add user to the room
                 room.save()
                 return JsonResponse({'room_code': room.room_code, 'game_id': game_id})
             except GameRoom.DoesNotExist:
                 return JsonResponse({'error': 'Invalid room code or room does not exist'}, status=400)
     
-    return render(request, 'games/game_room.html', {'game': game})
+    # For GET requests, fetch all active public rooms for the game
+    public_rooms = GameRoom.objects.filter(game=game, is_active=True, is_private=False)
+    
+    return render(request, 'games/game_room.html', {
+        'game': game,
+        'public_rooms': public_rooms  # Pass public rooms to the template
+    })
+
 
 
 from django.urls import reverse

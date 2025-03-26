@@ -28,7 +28,7 @@ from django.shortcuts import redirect
 
 def logout_view(request):
     logout(request)
-    return redirect('login')  # Redirect to login page
+    return redirect('home')  # Redirect to login page
 
 
 class CustomLogoutView(LogoutView):

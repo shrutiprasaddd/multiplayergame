@@ -37,15 +37,17 @@
     <!-- Display Room Code or Information -->
     <div id="room-info" style="margin-top: 1rem;"></div>
 
-    <!-- Available Rooms -->
-    <h3>Available Rooms</h3>
-    {% for room in game.game_room_set.all %}
-        <a href="{% url 'game_lobby' room_code=room.room_code game_id=game.game_id %}">
-            Join Room {{ room.room_code }}
-        </a><br>
-    {% empty %}
-        <p>No rooms available.</p>
-    {% endfor %}
+    <!-- Available Public Rooms -->
+    <h3>Available Public Rooms</h3>
+    {% if public_rooms %}
+        {% for room in public_rooms %}
+            <a href="{% url 'game_lobby' room_code=room.room_code game_id=game.game_id %}">
+                Join Room {{ room.room_code }}
+            </a><br>
+        {% endfor %}
+    {% else %}
+        <p>No public rooms available.</p>
+    {% endif %}
 </div>
 
 <script>
@@ -57,9 +59,9 @@ document.getElementById('create-room-form').onsubmit = async function (e) {
     });
     const data = await response.json();
     if (response.ok) {
-        document.getElementById('room-info').innerHTML = `Room Created! Code: ${data.room_code}`;
+        document.getElementById('room-info').innerHTML = `<p>Room Created Successfully! Your Room Code is: <strong>${data.room_code}</strong></p>`;
     } else {
-        alert(data.error || "An error occurred.");
+        alert(data.error || "An error occurred while creating the room.");
     }
 };
 
@@ -71,30 +73,11 @@ document.getElementById('join-room-form').onsubmit = async function (e) {
     });
     const data = await response.json();
     if (response.ok) {
-        // Redirect to the room lobby after joining the room
         window.location.href = `/game_lobby/${data.room_code}/${data.game_id}/`;
     } else {
         alert(data.error || "An error occurred.");
     }
 };
-
-
-document.getElementById('create-room-form').onsubmit = async function (e) {
-    e.preventDefault();
-    const response = await fetch("", {
-        method: "POST",
-        body: new FormData(this),
-    });
-    const data = await response.json();
-    if (response.ok) {
-        // Show the room code dynamically
-        document.getElementById('room-info').innerHTML = `<p>Room Created Successfully! Your Room Code is: <strong>${data.room_code}</strong></p>`;
-    } else {
-        alert(data.error || "An error occurred while creating the room.");
-    }
-};
-
-
 </script>
 
 {% endblock %}

@@ -74,18 +74,27 @@
         <div class="container">
             <a class="navbar-brand" href="#">Game Lobby</a>
             <div class="d-flex">
-                {% if user.is_authenticated %}
-                    <span class="navbar-text me-3">Welcome, {{ user.username }}</span>
-                    <form action="{% url 'logout' %}" method="post" style="display: inline;">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-danger">Logout</button>
-                    </form>
-                    
-                {% else %}
-                    <a class="btn btn-light me-2" href="{% url 'login' %}">Login</a>
-                    <a class="btn btn-primary" href="{% url 'signup' %}">Sign Up</a>
-                {% endif %}
-            </div>
+    {% if user.is_authenticated %}
+        <span class="navbar-text me-3">Welcome, {{ user.username }}</span>
+        <form id="logout-form" action="{% url 'logout' %}" method="post" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger" onclick="redirectToHome()">Logout</button>
+        </form>
+        
+        <script>
+            function redirectToHome() {
+                setTimeout(function() {
+                    window.location.href = "/";
+                }, 500); // Redirect to home page after logout
+            }
+        </script>
+
+    {% else %}
+        <a class="btn btn-light me-2" href="{% url 'login' %}">Login</a>
+        <a class="btn btn-primary" href="{% url 'signup' %}">Sign Up</a>
+    {% endif %}
+</div>
+
         </div>
     </nav>
     
