@@ -84,11 +84,15 @@ def home(request):
 
 
 
-from django.shortcuts import render
-from django.http import JsonResponse
-from .models import Game, GameRoom
-from django.views.decorators.csrf import csrf_exempt
+from django.utils.timezone import now, timedelta
+
+from django.utils.timezone import now, timedelta
+from django.db.models import Count
 import uuid
+from django.http import JsonResponse
+from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
+from .models import Game, GameRoom
 
 @csrf_exempt
 def game_room_views(request, game_id):
@@ -99,39 +103,91 @@ def game_room_views(request, game_id):
 
     if request.method == 'POST':
         action = request.POST.get('action')
-        
-        if action == 'create':
-            room_type = request.POST.get('room_type', 'public')  # Default to 'public'
-            
-            # Create a new room with the selected visibility type
+
+        if action == 'join_auto':
+            if game.slug == "chess":
+                # Find an available room with one player
+                room = GameRoom.objects.filter(game=game, is_active=True, is_private=False).annotate(
+                    player_count=Count('players')
+                ).filter(player_count=1).first()
+
+                if room:
+                    room.players.add(request.user)
+                    room.is_started = True  # Start game when both players join
+                    room.save()
+                else:
+                    # Create a new room if no available room exists
+                    room = GameRoom.objects.create(
+                        game=game,
+                        created_by=request.user,
+                        room_code=str(uuid.uuid4())[:8].upper(),
+                        is_private=False
+                    )
+                    room.players.add(request.user)
+                    room.save()
+
+                return JsonResponse({'room_code': room.room_code, 'game_id': game_id})
+
+            elif game.slug == "snake":
+                # Find an available room with less than 99 players
+                room = GameRoom.objects.filter(game=game, is_active=True, is_private=False).annotate(
+                    player_count=Count('players')
+                ).filter(player_count__lt=99).first()
+
+                if not room:
+                    # Create a new room if all are full
+                    room = GameRoom.objects.create(
+                        game=game,
+                        created_by=request.user,
+                        room_code=str(uuid.uuid4())[:8].upper(),
+                        is_private=False
+                    )
+
+                room.players.add(request.user)
+                room.save()
+
+                return JsonResponse({'room_code': room.room_code, 'game_id': game_id})
+
+        elif action == 'create_private_room':
+            # Create a private room
             room = GameRoom.objects.create(
                 game=game,
                 created_by=request.user,
-                room_code=str(uuid.uuid4())[:8].upper(),  # Ensure the room code is uppercase
-                is_private=(room_type == 'private')
+                room_code=str(uuid.uuid4())[:8].upper(),
+                is_private=True
             )
-            room.players.add(request.user)  # Add the host as a player
+            room.players.add(request.user)
             room.save()
+        
             
-            # Return JSON response with room code
-            return JsonResponse({'room_code': room.room_code})
+
+            return JsonResponse({'room_code': room.room_code, 'game_id': game_id, 'private': True})
         
         elif action == 'join':
-            room_code = request.POST.get('room_code', '').strip().upper()  # Normalize to uppercase
+            room_code = request.POST.get('room_code', '').strip().upper()
             try:
-                room = GameRoom.objects.get(room_code=room_code, game=game, is_active=True)
-                room.players.add(request.user)  # Add user to the room
+                room = GameRoom.objects.get(
+                    room_code=room_code, 
+                    game=game, 
+                    is_active=True
+                )
+                room.players.add(request.user)
                 room.save()
-                return JsonResponse({'room_code': room.room_code, 'game_id': game_id})
+                return JsonResponse({
+                    'room_code': room.room_code, 
+                    'game_id': game_id
+                })
             except GameRoom.DoesNotExist:
-                return JsonResponse({'error': 'Invalid room code or room does not exist'}, status=400)
-    
-    # For GET requests, fetch all active public rooms for the game
+                return JsonResponse({
+                    'error': 'Invalid room code or room does not exist'
+                }, status=400)
+
+    # Fetch all active public rooms
     public_rooms = GameRoom.objects.filter(game=game, is_active=True, is_private=False)
-    
+
     return render(request, 'games/game_room.html', {
         'game': game,
-        'public_rooms': public_rooms  # Pass public rooms to the template
+        'public_rooms': public_rooms
     })
 
 

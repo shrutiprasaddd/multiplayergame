@@ -1,5 +1,4 @@
 {% extends 'games/index.html' %}
-
 {% block title %}Manage Room{% endblock %}
 {% load static %}
 {% block content %}
@@ -8,25 +7,24 @@
 <div class="room-container">
     <h2>{{ game.name }} Room Management</h2>
 
-    <!-- Create Room Form -->
-    <h3>Create a Room</h3>
-    <form method="POST" id="create-room-form">
+    <!-- Create Private Room Form -->
+    <h3>Create a Private Room</h3>
+    <form method="POST" id="create-private-room-form">
         {% csrf_token %}
-        <input type="hidden" name="action" value="create">
-
-        <h4>Select Room Type</h4>
-        <label>
-            <input type="radio" name="room_type" value="public" checked> Public
-        </label>
-        <label>
-            <input type="radio" name="room_type" value="private"> Private
-        </label>
-        
-        <button type="submit" class="create-room-button">Create Room</button>
+        <input type="hidden" name="action" value="create_private_room">
+        <button type="submit" class="create-room-button">Create Private Room</button>
     </form>
 
-    <!-- Join Room Form -->
-    <h3>Join an Existing Room</h3>
+    <!-- Auto Join Room Form -->
+    <h3>Join a Public Room Automatically</h3>
+    <form method="POST" id="join-auto-room-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="join_auto">
+        <button type="submit" class="join-room-button">Join Public Room</button>
+    </form>
+
+    <!-- Join Room by Code Form -->
+    <h3>Join a Room by Code</h3>
     <form method="POST" id="join-room-form">
         {% csrf_token %}
         <input type="hidden" name="action" value="join">
@@ -34,7 +32,7 @@
         <button type="submit" class="join-room-button">Join Room</button>
     </form>
 
-    <!-- Display Room Code or Information -->
+    <!-- Room Info Display -->
     <div id="room-info" style="margin-top: 1rem;"></div>
 
     <!-- Available Public Rooms -->
@@ -51,33 +49,28 @@
 </div>
 
 <script>
-document.getElementById('create-room-form').onsubmit = async function (e) {
-    e.preventDefault();
+async function submitForm(formId) {
+    event.preventDefault();
+    const form = document.getElementById(formId);
     const response = await fetch("", {
         method: "POST",
-        body: new FormData(this),
+        body: new FormData(form),
     });
     const data = await response.json();
     if (response.ok) {
-        document.getElementById('room-info').innerHTML = `<p>Room Created Successfully! Your Room Code is: <strong>${data.room_code}</strong></p>`;
-    } else {
-        alert(data.error || "An error occurred while creating the room.");
-    }
-};
-
-document.getElementById('join-room-form').onsubmit = async function (e) {
-    e.preventDefault();
-    const response = await fetch("", {
-        method: "POST",
-        body: new FormData(this),
-    });
-    const data = await response.json();
-    if (response.ok) {
-        window.location.href = `/game_lobby/${data.room_code}/${data.game_id}/`;
+        if (formId === 'create-private-room-form') {
+            document.getElementById('room-info').innerHTML = `<p>Private Room Created! Code: <strong>${data.room_code}</strong></p>`;
+        } else {
+            window.location.href = `/game_lobby/${data.room_code}/${data.game_id}/`;
+        }
     } else {
         alert(data.error || "An error occurred.");
     }
-};
+}
+
+document.getElementById('create-private-room-form').onsubmit = () => submitForm('create-private-room-form');
+document.getElementById('join-auto-room-form').onsubmit = () => submitForm('join-auto-room-form');
+document.getElementById('join-room-form').onsubmit = () => submitForm('join-room-form');
 </script>
 
 {% endblock %}
