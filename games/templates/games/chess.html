@@ -124,9 +124,8 @@
             }
 
             setupWebSocket() {
-                const roomCode = prompt('Enter Room Code') || 'default';
+                const roomCode = "{{ game_room.room_code|escapejs }}";
                 this.socket = new WebSocket(`ws://127.0.0.1:8000/ws/game/${roomCode}/`);
-
                 this.socket.onopen = () => {
                     this.addMessage('Connected to server');
                     this.socket.send(JSON.stringify({ type: 'join' }));
