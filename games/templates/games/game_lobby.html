@@ -1,19 +1,334 @@
 {% extends 'games/index.html' %}
 
+{% block title %}Manage Room{% endblock %}
+{% load static %}
 {% block content %}
-{%load static%}
-<link rel="stylesheet" href="{% static 'css/games/lobby.css' %}">
-<h3>Room: {{ game_room.room_code }} - {{ game_room.game.name }}</h3>
-<p>Game Code: {{ game_code }}</p>
+<style>
+    /* Header Styles */
+    .header {
+        background-color: #2c3e50;
+        color: #fff;
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        z-index: 100;
+        box-sizing: border-box;
+    }
 
-<h4>Players in this Room:</h4>
-{% for player in players %}
-    <div>{{ player.username }} </div>
-{% endfor %}
+    .header-title {
+        font-size: 24px;
+        font-weight: bold;
+    }
 
-<form method="POST">
-    {% csrf_token %}
-    <button type="submit">Start Game</button>
-</form>
+    .header-links a, .header-button {
+        color: #fff;
+        text-decoration: none;
+        margin-left: 15px;
+        padding: 8px 15px;
+        border-radius: 5px;
+        background-color: transparent;
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    .header-button {
+        background-color: #3498db;
+        border-color: #3498db;
+    }
+
+    .header-links a:hover, .header-button:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Footer Styles */
+    .footer {
+        background-color: #2c3e50;
+        color: #fff;
+        text-align: center;
+        padding: 15px 20px;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        z-index: 100;
+        box-sizing: border-box;
+    }
+
+    .footer-text {
+        font-size: 14px;
+        margin-bottom: 5px;
+    }
+
+    .footer-links a {
+        color: #fff;
+        text-decoration: none;
+        margin: 0 10px;
+        opacity: 0.7;
+        transition: opacity 0.3s ease;
+    }
+
+    .footer-links a:hover {
+        opacity: 1;
+    }
+
+    /* Main Content Styles */
+    body, html {
+        height: 100%;
+        margin: 0;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #f0f0f0;
+        /* Remove fallback background color */
+    }
+
+    #vanta-canvas-full {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+    }
+
+    .overlay-container {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        padding-top: 70px;
+        padding-bottom: 70px;
+        box-sizing: border-box;
+        width: 100%;
+        min-height: calc(100vh - 50px - 50px); /* Adjust for header and footer height */
+        overflow-y: auto;
+        background-color: transparent; /* Make the overlay container transparent */
+    }
+
+    .room-container {
+        background-color: rgba(50, 50, 50, 0.85);
+        padding: 30px;
+        border-radius: 12px;
+        width: 80%;
+        max-width: 700px;
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        text-align: center;
+    }
+
+    .room-container h2 {
+        color: #81d4fa;
+        margin-top: 0;
+        margin-bottom: 20px;
+    }
+
+    .room-container h3 {
+        color: #90caf9;
+        margin-top: 20px;
+        margin-bottom: 15px;
+        text-align: center;
+    }
+
+    .room-container form {
+        margin-bottom: 20px;
+    }
+
+    .room-container input[type="radio"] {
+        margin-right: 5px;
+    }
+
+    .room-container label {
+        color: #ccc;
+        margin-right: 15px;
+    }
+
+    .room-container input[type="text"] {
+        padding: 10px;
+        border: 1px solid #777;
+        border-radius: 5px;
+        background-color: #444;
+        color: #eee;
+        width: 200px;
+        margin-right: 10px;
+    }
+
+    .room-container button {
+        padding: 10px 15px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background-color 0.3s ease;
+    }
+
+    .room-container .create-room-button {
+        background-color: #1e88e5;
+        color: white;
+    }
+
+    .room-container .join-room-button {
+        background-color: #43a047;
+        color: white;
+    }
+
+    .room-container .create-room-button:hover {
+        background-color: #1565c0;
+    }
+
+    .room-container .join-room-button:hover {
+        background-color: #2e7d32;
+    }
+
+    .room-container #room-info {
+        background-color: rgba(68, 138, 255, 0.15);
+        color: #bbdefb;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 20px;
+        border: 1px solid #64b5f6;
+        text-align: center;
+    }
+
+    .room-container #room-info strong {
+        color: #fff;
+    }
+
+    .room-container a {
+        display: inline-block;
+        background-color: transparent;
+        color: #64b5f6;
+        text-decoration: none;
+        padding: 8px 15px;
+        border: 1px solid #64b5f6;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        transition: background-color 0.3s ease;
+    }
+
+    .room-container a:hover {
+        background-color: rgba(100, 181, 246, 0.1);
+    }
+
+    .room-container p {
+        color: #ccc;
+    }
+</style>
+<div class="header">
+    <div class="header-title">GAME PLATFORM</div>
+    <div class="header-links">
+        <a href="#">Home</a>
+        <button class="header-button">LOGOUT</button>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vanta/0.5.24/vanta.net.min.js"></script>
+
+<div id="vanta-canvas-full"></div>
+
+<div class="overlay-container">
+    <div class="room-container">
+        <h2>{{ game.name }} Room Management</h2>
+
+        <h3>Create a Room</h3>
+        <form method="POST" id="create-room-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create">
+
+            <h4>Select Room Type</h4>
+            <label>
+                <input type="radio" name="room_type" value="public" checked> Public
+            </label>
+            <label>
+                <input type="radio" name="room_type" value="private"> Private
+            </label>
+
+            <button type="submit" class="create-room-button">Create Room</button>
+        </form>
+
+        <h3>Join an Existing Room</h3>
+        <form method="POST" id="join-room-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="join">
+            <input type="text" name="room_code" placeholder="Enter Room Code" required>
+            <button type="submit" class="join-room-button">Join Room</button>
+        </form>
+
+        <div id="room-info" style="margin-top: 1rem;"></div>
+
+        <h3>Available Public Rooms</h3>
+        {% if public_rooms %}
+            {% for room in public_rooms %}
+                <a href="{% url 'game_lobby' room_code=room.room_code game_id=game.game_id %}">
+                    Join Room {{ room.room_code }}
+                </a><br>
+            {% endfor %}
+        {% else %}
+            <p>No public rooms available.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="footer">
+    <div class="footer-text">Game Platform All Rights Reserved</div>
+    <div class="footer-links">
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Service</a>
+        <a href="#">Contact Us</a>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    VANTA.NET({
+        el: "#vanta-canvas-full",
+        mouseControls: true,
+        touchControls: true,
+        gyroControls: false,
+        minHeight: window.innerHeight,
+        minWidth: window.innerWidth,
+        scale: 1.00,
+        scaleMobile: 1.00,
+        color: 0x3fa4ff,
+        backgroundColor: 0x1d1d1d,
+        points: 10.00,
+        maxDistance: 18.00,
+        spacing: 15.00
+    });
+});
+
+document.getElementById('create-room-form').onsubmit = async function (e) {
+    e.preventDefault();
+    const response = await fetch("", {
+        method: "POST",
+        body: new FormData(this),
+    });
+    const data = await response.json();
+    if (response.ok) {
+        document.getElementById('room-info').innerHTML = `<p>Room Created Successfully! Your Room Code is: <strong>${data.room_code}</strong></p>`;
+    } else {
+        alert(data.error || "An error occurred while creating the room.");
+    }
+};
+
+document.getElementById('join-room-form').onsubmit = async function (e) {
+    e.preventDefault();
+    const response = await fetch("", {
+        method: "POST",
+        body: new FormData(this),
+    });
+    const data = await response.json();
+    if (response.ok) {
+        window.location.href = `/game_lobby/${data.room_code}/${data.game_id}/`;
+    } else {
+        alert(data.error || "An error occurred.");
+    }
+};
+</script>
 
 {% endblock %}
