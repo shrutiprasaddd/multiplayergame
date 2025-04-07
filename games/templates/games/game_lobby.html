@@ -1,90 +1,16 @@
 {% extends 'games/index.html' %}
 
 {% block content %}
-{%load static%}
+{% load static %}
 <link rel="stylesheet" href="{% static 'css/games/lobby.css' %}">
+
 <style>
-    /* Header Styles (if not already in base.html or a shared CSS) */
-    .header {
-        background-color: #2c3e50;
-        color: #fff;
-        padding: 15px 20px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        z-index: 100;
-        box-sizing: border-box;
-    }
-
-    .header-title {
-        font-size: 24px;
-        font-weight: bold;
-    }
-
-    .header-links a, .header-button {
-        color: #fff;
-        text-decoration: none;
-        margin-left: 15px;
-        padding: 8px 15px;
-        border-radius: 5px;
-        background-color: transparent;
-        border: 1px solid transparent;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
-    }
-
-    .header-button {
-        background-color: #3498db;
-        border-color: #3498db;
-    }
-
-    .header-links a:hover, .header-button:hover {
-        background-color: rgba(255, 255, 255, 0.1);
-    }
-
-    /* Footer Styles (if not already in base.html or a shared CSS) */
-    .footer {
-        background-color: #2c3e50;
-        color: #fff;
-        text-align: center;
-        padding: 15px 20px;
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        z-index: 100;
-        box-sizing: border-box;
-    }
-
-    .footer-text {
-        font-size: 14px;
-        margin-bottom: 5px;
-    }
-
-    .footer-links a {
-        color: #fff;
-        text-decoration: none;
-        margin: 0 10px;
-        opacity: 0.7;
-        transition: opacity 0.3s ease;
-    }
-
-    .footer-links a:hover {
-        opacity: 1;
-    }
-
-    /* Main Content Styles */
+    /* General Page Styles */
     body, html {
         height: 100%;
         margin: 0;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         color: #f0f0f0;
-        /* Remove fallback background color */
     }
 
     #vanta-canvas-full {
@@ -102,45 +28,55 @@
         flex-direction: column;
         align-items: center;
         justify-content: flex-start;
-        padding-top: 70px;
-        padding-bottom: 70px;
+        padding: 100px 20px 100px; /* Top/bottom padding for space */
         box-sizing: border-box;
         width: 100%;
-        min-height: calc(100vh - 50px - 50px);
+        min-height: 100vh;
         overflow-y: auto;
         background-color: transparent;
-        text-align: center; /* Center the lobby content */
+        text-align: center;
     }
 
     .lobby-content {
         background-color: rgba(50, 50, 50, 0.85);
         padding: 30px;
         border-radius: 12px;
-        width: 80%;
+        width: 90%;
         max-width: 600px;
         box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
     }
 
     .lobby-content h3 {
-        color: #81d4fa;
+        color: #4dd0e1;
+        font-size: 24px;
         margin-top: 0;
-        margin-bottom: 20px;
-    }
-
-    .lobby-content p {
-        color: #90caf9;
         margin-bottom: 15px;
     }
 
+    .lobby-content p {
+        color: #ffeb3b;
+        background-color: #424242;
+        padding: 10px 15px;
+        border-radius: 8px;
+        display: inline-block;
+        font-weight: bold;
+        margin-bottom: 25px;
+    }
+
     .lobby-content h4 {
-        color: #bbdefb;
-        margin-top: 25px;
+        color: #81d4fa;
         margin-bottom: 10px;
     }
 
     .lobby-content div {
-        color: #ccc;
-        margin-bottom: 8px;
+        color: #ffffff;
+        background-color: #263238;
+        padding: 8px 12px;
+        border-radius: 6px;
+        margin: 5px auto;
+        width: 70%;
+        font-weight: 500;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
 
     .lobby-content form {
@@ -151,7 +87,7 @@
         padding: 12px 25px;
         border: none;
         border-radius: 5px;
-        background-color: #4CAF50; /* Green start button */
+        background-color: #4CAF50;
         color: white;
         font-size: 16px;
         cursor: pointer;
@@ -163,42 +99,27 @@
     }
 </style>
 
-<div class="header">
-    <div class="header-title">GAME PLATFORM</div>
-    <div class="header-links">
-        <a href="#">Home</a>
-        <button class="header-button">LOGOUT</button>
-    </div>
-</div>
-
+<!-- Vanta BG -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vanta/0.5.24/vanta.net.min.js"></script>
 
 <div id="vanta-canvas-full"></div>
 
+<!-- Main Lobby UI -->
 <div class="overlay-container">
     <div class="lobby-content">
-        <h3>Room: {{ game_room.room_code }} - {{ game_room.game.name }}</h3>
-        <p>Game Code: {{ game_code }}</p>
+        <h3>Room: <span style="color: #81d4fa;">{{ game_room.room_code }}</span> - {{ game_room.game.name }}</h3>
+        <p>Room Code: {{ game_code }}</p>
 
         <h4>Players in this Room:</h4>
         {% for player in players %}
-            <div>{{ player.username }} </div>
+            <div>{{ player.username }}</div>
         {% endfor %}
 
         <form method="POST">
             {% csrf_token %}
             <button type="submit">Start Game</button>
         </form>
-    </div>
-</div>
-
-<div class="footer">
-    <div class="footer-text">Game Platform All Rights Reserved</div>
-    <div class="footer-links">
-        <a href="#">Privacy Policy</a>
-        <a href="#">Terms of Service</a>
-        <a href="#">Contact Us</a>
     </div>
 </div>
 
