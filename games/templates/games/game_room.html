@@ -1,3 +1,7 @@
+{% extends 'games/index.html' %}
+{% block title %}Manage Room{% endblock %}
+{% load static %}
+{% block content %}
 <style>
     /* Main Content Styles */
     html, body {
@@ -141,8 +145,12 @@
     }
 </style>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vanta/0.5.24/vanta.net.min.js"></script>
+
+<div id="vanta-canvas-full"></div>
+
 <div class="overlay-container">
-    <div id="vanta-canvas-full"></div>
     <div class="room-container">
         <h2>{{ game.name }} Room Management</h2>
 
@@ -184,9 +192,6 @@
         {% endif %}
     </div>
 </div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vanta/0.5.24/vanta.net.min.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
