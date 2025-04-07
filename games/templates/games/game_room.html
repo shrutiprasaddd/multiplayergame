@@ -1,176 +1,161 @@
+{% load static %}
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/games/room.css' %}">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ game.name }} Room Management</title>
 
-<!-- Container for background and card -->
-<div class="room-wrapper">
-    <div class="vanta-bg" id="vanta-room-bg"></div>
-    <div class="room-container">
-        <h2>{{ game.name }} Room Management</h2>
+    <!-- Vanta.js & Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r121/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.net.min.js"></script>
 
-        <!-- Create Room -->
-        <h3>Create a Room</h3>
-        <form method="POST" id="create-private-room-form" class="room-form">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="create_private_room">
-            <button type="submit" class="create-room-button">Create Private Room</button>
-        </form>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Segoe UI', sans-serif;
+            color: #fff;
+        }
 
-        <!-- Auto Join -->
-        <h3>Join a Public Room Automatically</h3>
-        <form method="POST" id="join-auto-room-form" class="room-form">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="join_auto">
-            <button type="submit" class="join-room-button">Join Public Room</button>
-        </form>
+        .room-wrapper {
+            position: relative;
+            width: 100%;
+            min-height: 100vh;
+            overflow: hidden;
+        }
 
-        <!-- Join with Code -->
-        <h3>Join a Room by Code</h3>
-        <form method="POST" id="join-room-form" class="room-form">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="join">
-            <input type="text" name="room_code" placeholder="Enter Room Code" required>
-            <button type="submit" class="join-room-button">Join Room</button>
-        </form>
+        .vanta-bg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            top: 0;
+            left: 0;
+        }
 
-        <!-- Show Info -->
-        <div id="room-info"></div>
+        .room-container {
+            position: relative;
+            z-index: 2;
+            max-width: 600px;
+            margin: 100px auto;
+            background-color: rgba(30, 30, 30, 0.9);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+            text-align: center;
+        }
 
-        <!-- List of Rooms -->
-        <h3>Available Public Rooms</h3>
-        {% if public_rooms %}
-            {% for room in public_rooms %}
-                <a href="{% url 'game_lobby' room_code=room.room_code game_id=game.game_id %}" class="room-link">
-                    Join Room {{ room.room_code }}
-                </a><br>
-            {% endfor %}
-        {% else %}
-            <p>No public rooms available.</p>
-        {% endif %}
+        h2, h3 {
+            margin-bottom: 20px;
+            color: #55cfff;
+        }
+
+        form {
+            margin-bottom: 25px;
+        }
+
+        input[type="text"] {
+            padding: 10px 15px;
+            width: 70%;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+        }
+
+        button {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s ease;
+        }
+
+        .create-btn {
+            background-color: #1e90ff;
+            color: white;
+        }
+
+        .create-btn:hover {
+            background-color: #0073e6;
+        }
+
+        .join-btn {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .join-btn:hover {
+            background-color: #1f7c35;
+        }
+
+        .public-room-btn {
+            background-color: #007bff;
+            color: white;
+            margin: 5px 0;
+        }
+
+        .public-room-btn:hover {
+            background-color: #0056b3;
+        }
+
+        label {
+            margin: 0 10px;
+            font-size: 14px;
+            color: #ddd;
+        }
+
+        p {
+            margin: 10px 0;
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="room-wrapper">
+        <div class="vanta-bg" id="vanta-bg"></div>
+
+        <div class="room-container">
+            <h2>{{ game.name }} Room Management</h2>
+
+            <h3>Create a Room</h3>
+            <form method="post">
+                {% csrf_token %}
+                <label><input type="radio" name="room_type" value="public" checked> Public</label>
+                <label><input type="radio" name="room_type" value="private"> Private</label>
+                <br><br>
+                <button type="submit" class="create-btn">Create Room</button>
+            </form>
+
+            <h3>Join an Existing Room</h3>
+            <form method="post">
+                {% csrf_token %}
+                <input type="text" name="room_code" placeholder="Enter Room Code">
+                <button type="submit" class="join-btn">Join Room</button>
+            </form>
+
+            <h3>Available Public Rooms</h3>
+            {% if public_rooms %}
+                {% for room in public_rooms %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="room_code" value="{{ room.room_code }}">
+                        <button type="submit" class="public-room-btn">
+                            Join Room {{ room.room_code }}
+                        </button>
+                    </form>
+                {% endfor %}
+            {% else %}
+                <p>No public rooms available.</p>
+            {% endif %}
+        </div>
     </div>
-</div>
 
-<!-- Styling -->
-<style>
-    .room-wrapper {
-        position: relative;
-        width: 100%;
-        min-height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        padding: 60px 0;
-        overflow: hidden;
-    }
-
-    .vanta-bg {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 1;
-    }
-
-    .room-container {
-        position: relative;
-        z-index: 2;
-        background: rgba(30, 30, 30, 0.8);
-        border-radius: 20px;
-        padding: 40px 30px;
-        width: 90%;
-        max-width: 700px;
-        backdrop-filter: blur(10px);
-        box-shadow: 0 0 30px rgba(0, 0, 0, 0.4);
-        text-align: center;
-        color: #e0f7fa;
-    }
-
-    h2, h3 {
-        color: #4dd0e1;
-        margin-bottom: 20px;
-    }
-
-    .room-form {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        justify-content: center;
-        margin-bottom: 20px;
-    }
-
-    .room-form input[type="text"] {
-        padding: 10px;
-        background: #333;
-        color: #fff;
-        border: 1px solid #666;
-        border-radius: 6px;
-        width: 200px;
-    }
-
-    .room-form button {
-        padding: 10px 20px;
-        border: none;
-        border-radius: 6px;
-        font-weight: bold;
-        cursor: pointer;
-        transition: 0.3s;
-    }
-
-    .create-room-button {
-        background: #2196f3;
-        color: white;
-    }
-
-    .create-room-button:hover {
-        background: #1976d2;
-    }
-
-    .join-room-button {
-        background: #4caf50;
-        color: white;
-    }
-
-    .join-room-button:hover {
-        background: #388e3c;
-    }
-
-    .room-link {
-        display: inline-block;
-        margin: 5px 0;
-        padding: 8px 15px;
-        color: #81d4fa;
-        border: 1px solid #81d4fa;
-        border-radius: 5px;
-        text-decoration: none;
-        transition: 0.3s;
-    }
-
-    .room-link:hover {
-        background: rgba(129, 212, 250, 0.1);
-    }
-
-    #room-info {
-        margin-top: 15px;
-        background: rgba(68, 138, 255, 0.1);
-        padding: 10px;
-        border-radius: 8px;
-        color: #bbdefb;
-    }
-
-    .room-container p {
-        color: #ccc;
-        margin-top: 5px;
-    }
-</style>
-
-<!-- VANTA Script -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r121/three.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vanta/0.5.24/vanta.net.min.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        if (typeof VANTA === 'undefined' || typeof THREE === 'undefined') return;
+    <script>
         VANTA.NET({
-            el: "#vanta-room-bg",
+            el: "#vanta-bg",
             mouseControls: true,
             touchControls: true,
             gyroControls: false,
@@ -178,48 +163,10 @@
             minWidth: 200.00,
             scale: 1.00,
             scaleMobile: 1.00,
-            color: 0x00bcd4,
-            backgroundColor: 0x0d1117,
-            points: 10.00,
-            maxDistance: 25.00,
-            spacing: 18.00
+            color: 0x55cfff,
+            backgroundColor: 0x0f0f0f
         });
-
-        const handleFormSubmit = async (event, formId) => {
-            event.preventDefault();
-            const form = document.getElementById(formId);
-            try {
-                const response = await fetch(window.location.pathname, {
-                    method: 'POST',
-                    body: new FormData(form),
-                    headers: {
-                        'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value
-                    }
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    if (formId === 'create-private-room-form') {
-                        document.getElementById('room-info').innerHTML =
-                            `<p>Private Room Created! Code: <strong>${data.room_code}</strong></p>`;
-                    } else {
-                        window.location.href = `/game_lobby/${data.room_code}/${data.game_id}/`;
-                    }
-                } else {
-                    throw new Error(data.error || 'Something went wrong');
-                }
-            } catch (err) {
-                alert(err.message);
-            }
-        };
-
-        ['create-private-room-form', 'join-auto-room-form', 'join-room-form'].forEach(id => {
-            const form = document.getElementById(id);
-            if (form) {
-                form.addEventListener('submit', (e) => handleFormSubmit(e, id));
-            }
-        });
-    });
-</script>
+    </script>
+</body>
+</html>
 {% endblock %}
