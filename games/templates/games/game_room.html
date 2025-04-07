@@ -1,24 +1,21 @@
-{% extends 'games/index.html' %}
-{% block title %}Manage Room{% endblock %}
-{% load static %}
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/games/room.css' %}">
 
-<!-- Main Content -->
-<div class="overlay-container">
-    <div id="vanta-canvas-full"></div>
+<!-- Container for background and card -->
+<div class="room-wrapper">
+    <div class="vanta-bg" id="vanta-room-bg"></div>
     <div class="room-container">
         <h2>{{ game.name }} Room Management</h2>
 
-        <!-- Create Private Room Form -->
-        <h3>Create a Private Room</h3>
+        <!-- Create Room -->
+        <h3>Create a Room</h3>
         <form method="POST" id="create-private-room-form" class="room-form">
             {% csrf_token %}
             <input type="hidden" name="action" value="create_private_room">
             <button type="submit" class="create-room-button">Create Private Room</button>
         </form>
 
-        <!-- Auto Join Room Form -->
+        <!-- Auto Join -->
         <h3>Join a Public Room Automatically</h3>
         <form method="POST" id="join-auto-room-form" class="room-form">
             {% csrf_token %}
@@ -26,7 +23,7 @@
             <button type="submit" class="join-room-button">Join Public Room</button>
         </form>
 
-        <!-- Join Room by Code Form -->
+        <!-- Join with Code -->
         <h3>Join a Room by Code</h3>
         <form method="POST" id="join-room-form" class="room-form">
             {% csrf_token %}
@@ -35,10 +32,10 @@
             <button type="submit" class="join-room-button">Join Room</button>
         </form>
 
-        <!-- Room Info Display -->
+        <!-- Show Info -->
         <div id="room-info"></div>
 
-        <!-- Available Public Rooms -->
+        <!-- List of Rooms -->
         <h3>Available Public Rooms</h3>
         {% if public_rooms %}
             {% for room in public_rooms %}
@@ -52,29 +49,21 @@
     </div>
 </div>
 
-<!-- Style -->
+<!-- Styling -->
 <style>
-    body, html {
-        margin: 0;
-        padding: 0;
-        height: 100%;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        color: #f0f0f0;
-        background-color: #0d1117;
-        overflow-x: hidden;
-    }
-
-    .overlay-container {
+    .room-wrapper {
         position: relative;
+        width: 100%;
         min-height: 100vh;
-        padding: 70px 0;
         display: flex;
         justify-content: center;
         align-items: center;
+        padding: 60px 0;
+        overflow: hidden;
     }
 
-    #vanta-canvas-full {
-        position: fixed;
+    .vanta-bg {
+        position: absolute;
         top: 0;
         left: 0;
         width: 100%;
@@ -85,166 +74,152 @@
     .room-container {
         position: relative;
         z-index: 2;
-        width: 85%;
+        background: rgba(30, 30, 30, 0.8);
+        border-radius: 20px;
+        padding: 40px 30px;
+        width: 90%;
         max-width: 700px;
-        padding: 30px;
-        background: rgba(20, 20, 20, 0.7);
-        border-radius: 15px;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
         backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 0 30px rgba(0, 0, 0, 0.4);
         text-align: center;
+        color: #e0f7fa;
     }
 
     h2, h3 {
-        color: #81d4fa;
-        margin-bottom: 15px;
+        color: #4dd0e1;
+        margin-bottom: 20px;
     }
 
     .room-form {
-        margin-bottom: 20px;
         display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 10px;
         flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+        margin-bottom: 20px;
     }
 
     .room-form input[type="text"] {
         padding: 10px;
-        border: 1px solid #666;
-        border-radius: 5px;
-        background-color: #333;
+        background: #333;
         color: #fff;
+        border: 1px solid #666;
+        border-radius: 6px;
         width: 200px;
     }
 
     .room-form button {
         padding: 10px 20px;
         border: none;
-        border-radius: 5px;
+        border-radius: 6px;
         font-weight: bold;
         cursor: pointer;
-        transition: background-color 0.3s ease;
+        transition: 0.3s;
     }
 
     .create-room-button {
-        background-color: #2196f3;
-        color: white;
-    }
-
-    .join-room-button {
-        background-color: #4caf50;
+        background: #2196f3;
         color: white;
     }
 
     .create-room-button:hover {
-        background-color: #1976d2;
+        background: #1976d2;
+    }
+
+    .join-room-button {
+        background: #4caf50;
+        color: white;
     }
 
     .join-room-button:hover {
-        background-color: #388e3c;
+        background: #388e3c;
     }
 
     .room-link {
         display: inline-block;
-        background-color: transparent;
-        color: #64b5f6;
-        text-decoration: none;
-        padding: 8px 15px;
-        border: 1px solid #64b5f6;
-        border-radius: 5px;
         margin: 5px 0;
-        transition: background-color 0.3s ease;
+        padding: 8px 15px;
+        color: #81d4fa;
+        border: 1px solid #81d4fa;
+        border-radius: 5px;
+        text-decoration: none;
+        transition: 0.3s;
     }
 
     .room-link:hover {
-        background-color: rgba(100, 181, 246, 0.1);
+        background: rgba(129, 212, 250, 0.1);
     }
 
     #room-info {
-        background-color: rgba(68, 138, 255, 0.1);
-        border: 1px solid #64b5f6;
+        margin-top: 15px;
+        background: rgba(68, 138, 255, 0.1);
         padding: 10px;
-        border-radius: 10px;
+        border-radius: 8px;
         color: #bbdefb;
-        margin-top: 20px;
     }
 
     .room-container p {
         color: #ccc;
-        margin: 10px 0;
+        margin-top: 5px;
     }
 </style>
 
-<!-- Vanta Effect Scripts -->
+<!-- VANTA Script -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r121/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vanta/0.5.24/vanta.net.min.js"></script>
-
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    if (typeof VANTA === 'undefined' || typeof THREE === 'undefined') {
-        console.error('Vanta or THREE not loaded');
-        return;
-    }
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof VANTA === 'undefined' || typeof THREE === 'undefined') return;
+        VANTA.NET({
+            el: "#vanta-room-bg",
+            mouseControls: true,
+            touchControls: true,
+            gyroControls: false,
+            minHeight: 200.00,
+            minWidth: 200.00,
+            scale: 1.00,
+            scaleMobile: 1.00,
+            color: 0x00bcd4,
+            backgroundColor: 0x0d1117,
+            points: 10.00,
+            maxDistance: 25.00,
+            spacing: 18.00
+        });
 
-    const vantaEffect = VANTA.NET({
-        el: "#vanta-canvas-full",
-        mouseControls: true,
-        touchControls: true,
-        gyroControls: false,
-        minHeight: 200.00,
-        minWidth: 200.00,
-        scale: 1.00,
-        scaleMobile: 1.00,
-        color: 0x00bcd4,
-        backgroundColor: 0x0d1117,
-        points: 12.00,
-        maxDistance: 25.00,
-        spacing: 18.00
-    });
+        const handleFormSubmit = async (event, formId) => {
+            event.preventDefault();
+            const form = document.getElementById(formId);
+            try {
+                const response = await fetch(window.location.pathname, {
+                    method: 'POST',
+                    body: new FormData(form),
+                    headers: {
+                        'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                });
 
-    // Recalculate on window resize
-    window.addEventListener('resize', () => {
-        vantaEffect.resize();
-    });
+                const data = await response.json();
 
-    // AJAX Form Handler
-    const handleFormSubmit = async (event, formId) => {
-        event.preventDefault();
-        const form = document.getElementById(formId);
-        try {
-            const response = await fetch(window.location.pathname, {
-                method: 'POST',
-                body: new FormData(form),
-                headers: {
-                    'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value
-                }
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                if (formId === 'create-private-room-form') {
-                    document.getElementById('room-info').innerHTML =
-                        `<p>Private Room Created! Code: <strong>${data.room_code}</strong></p>`;
+                if (response.ok) {
+                    if (formId === 'create-private-room-form') {
+                        document.getElementById('room-info').innerHTML =
+                            `<p>Private Room Created! Code: <strong>${data.room_code}</strong></p>`;
+                    } else {
+                        window.location.href = `/game_lobby/${data.room_code}/${data.game_id}/`;
+                    }
                 } else {
-                    window.location.href = `/game_lobby/${data.room_code}/${data.game_id}/`;
+                    throw new Error(data.error || 'Something went wrong');
                 }
-            } else {
-                throw new Error(data.error || 'An error occurred');
+            } catch (err) {
+                alert(err.message);
             }
-        } catch (error) {
-            alert(error.message);
-        }
-    };
+        };
 
-    ['create-private-room-form', 'join-auto-room-form', 'join-room-form'].forEach(formId => {
-        const form = document.getElementById(formId);
-        if (form) {
-            form.addEventListener('submit', (e) => handleFormSubmit(e, formId));
-        }
+        ['create-private-room-form', 'join-auto-room-form', 'join-room-form'].forEach(id => {
+            const form = document.getElementById(id);
+            if (form) {
+                form.addEventListener('submit', (e) => handleFormSubmit(e, id));
+            }
+        });
     });
-});
 </script>
 {% endblock %}
