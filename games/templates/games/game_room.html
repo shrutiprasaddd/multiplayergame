@@ -1,15 +1,11 @@
-{% extends 'games/index.html' %}
-{% block title %}Manage Room{% endblock %}
-{% load static %}
-{% block content %}
 <style>
     /* Main Content Styles */
-    body, html {
-        height: 100%;
+    html, body {
+        height: 100%; /* Ensure full height for html and body */
         margin: 0;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         color: #f0f0f0;
-        overflow: hidden; /* Prevent scrollbars for full background */
+        overflow: hidden; /* Prevent default scrollbars */
     }
 
     #vanta-canvas-full {
@@ -18,7 +14,7 @@
         left: 0;
         width: 100%;
         height: 100%;
-        z-index: -1; /* Behind the content */
+        z-index: -1; /* Behind other content */
     }
 
     .overlay-container {
@@ -27,13 +23,13 @@
         flex-direction: column;
         align-items: center;
         justify-content: center; /* Center content vertically */
-        padding: 20px; /* Add some padding around the container */
+        padding: 20px;
         box-sizing: border-box;
         width: 100%;
-        min-height: 100vh; /* Full viewport height */
-        overflow-y: auto; /* Allow scrolling for content if it overflows */
-        background-color: transparent; /* Make the overlay transparent */
-        z-index: 0; /* Ensure content is above the background */
+        min-height: 100vh; /* Ensure full viewport height */
+        overflow-y: auto; /* Allow scrolling for content if needed */
+        background-color: transparent; /* Make it transparent to see Vanta */
+        z-index: 0; /* Ensure it's above Vanta */
     }
 
     .room-container {
@@ -44,7 +40,7 @@
         max-width: 700px;
         box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
         text-align: center;
-        z-index: 1; /* Ensure it's above the background */
+        z-index: 1; /* Ensure it's above Vanta */
     }
 
     .room-container h2 {
@@ -145,12 +141,8 @@
     }
 </style>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vanta/0.5.24/vanta.net.min.js"></script>
-
-<div id="vanta-canvas-full"></div>
-
 <div class="overlay-container">
+    <div id="vanta-canvas-full"></div>
     <div class="room-container">
         <h2>{{ game.name }} Room Management</h2>
 
@@ -192,6 +184,9 @@
         {% endif %}
     </div>
 </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vanta/0.5.24/vanta.net.min.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
