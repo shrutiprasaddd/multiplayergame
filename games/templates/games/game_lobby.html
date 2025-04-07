@@ -3,16 +3,8 @@
 {% block content %}
 {% load static %}
 <link rel="stylesheet" href="{% static 'css/games/lobby.css' %}">
-
 <style>
-    /* General Page Styles */
-    body, html {
-        height: 100%;
-        margin: 0;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        color: #f0f0f0;
-    }
-
+    /* VANTA background canvas */
     #vanta-canvas-full {
         position: fixed;
         top: 0;
@@ -22,65 +14,69 @@
         z-index: -1;
     }
 
+    /* Remove white background and allow transparency */
+    body, html {
+        height: 100%;
+        margin: 0;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: transparent !important;
+        color: #f0f0f0;
+    }
+
     .overlay-container {
         position: relative;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: flex-start;
-        padding: 100px 20px 100px; /* Top/bottom padding for space */
-        box-sizing: border-box;
+        padding-top: 70px;
+        padding-bottom: 70px;
         width: 100%;
-        min-height: 100vh;
+        min-height: calc(100vh - 100px);
         overflow-y: auto;
         background-color: transparent;
         text-align: center;
+        z-index: 1;
     }
 
     .lobby-content {
         background-color: rgba(50, 50, 50, 0.85);
         padding: 30px;
         border-radius: 12px;
-        width: 90%;
+        width: 80%;
         max-width: 600px;
         box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
     }
 
     .lobby-content h3 {
-        color: #4dd0e1;
-        font-size: 24px;
+        color: #00e5ff; /* Complementary highlight */
         margin-top: 0;
-        margin-bottom: 15px;
+        margin-bottom: 20px;
     }
 
-    .lobby-content p {
-        color: #ffeb3b;
-        background-color: #424242;
-        padding: 10px 15px;
-        border-radius: 8px;
+    .room-code-label {
         display: inline-block;
+        background-color: #ffca28;
+        color: #000;
+        padding: 6px 12px;
+        border-radius: 6px;
+        margin-bottom: 10px;
         font-weight: bold;
-        margin-bottom: 25px;
     }
 
     .lobby-content h4 {
-        color: #81d4fa;
+        color: #90caf9;
+        margin-top: 25px;
         margin-bottom: 10px;
     }
 
-    .lobby-content div {
-        color: #ffffff;
+    .player-entry {
         background-color: #263238;
-        padding: 8px 12px;
+        padding: 10px;
         border-radius: 6px;
-        margin: 5px auto;
-        width: 70%;
-        font-weight: 500;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    }
-
-    .lobby-content form {
-        margin-top: 30px;
+        margin: 6px auto;
+        width: 80%;
+        color: #fff;
     }
 
     .lobby-content button[type="submit"] {
@@ -92,6 +88,7 @@
         font-size: 16px;
         cursor: pointer;
         transition: background-color 0.3s ease;
+        margin-top: 20px;
     }
 
     .lobby-content button[type="submit"]:hover {
@@ -99,39 +96,39 @@
     }
 </style>
 
-<!-- Vanta BG -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vanta/0.5.24/vanta.net.min.js"></script>
-
+<!-- VANTA Canvas -->
 <div id="vanta-canvas-full"></div>
 
-<!-- Main Lobby UI -->
+<!-- Lobby Content -->
 <div class="overlay-container">
     <div class="lobby-content">
-        <h3>Room: <span style="color: #81d4fa;">{{ game_room.room_code }}</span> - {{ game_room.game.name }}</h3>
-        <p>Room Code: {{ game_code }}</p>
+        <h3>Room: {{ game_room.room_code }} - {{ game_room.game.name }}</h3>
+        <div class="room-code-label">Room Code:</div>
 
         <h4>Players in this Room:</h4>
         {% for player in players %}
-            <div>{{ player.username }}</div>
+            <div class="player-entry">{{ player.username }}</div>
         {% endfor %}
 
         <form method="POST">
             {% csrf_token %}
-            <button type="submit">Start Game</button>
+            <button type="submit">START GAME</button>
         </form>
     </div>
 </div>
 
+<!-- Scripts -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vanta/0.5.24/vanta.net.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('load', () => {
     VANTA.NET({
         el: "#vanta-canvas-full",
         mouseControls: true,
         touchControls: true,
         gyroControls: false,
-        minHeight: window.innerHeight,
-        minWidth: window.innerWidth,
+        minHeight: 200.00,
+        minWidth: 200.00,
         scale: 1.00,
         scaleMobile: 1.00,
         color: 0x3fa4ff,
@@ -142,5 +139,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 </script>
-
 {% endblock %}
