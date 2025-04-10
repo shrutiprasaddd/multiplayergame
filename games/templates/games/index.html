@@ -8,12 +8,11 @@
 
     <link rel="stylesheet" href="{% static 'css/games/home.css' %}">
     <link rel="stylesheet" href="{% static 'css/games/index.css' %}">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&family=Poppins:wght@300;400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
     <meta name="description" content="A platform for online multiplayer games, including Snake, Agar.io, Chess, and more. Join now!">
     <meta name="keywords" content="games, multiplayer, online, Snake, Agar.io, Chess">
 
     <style>
-        /* Base styles */
         * {
             margin: 0;
             padding: 0;
@@ -25,7 +24,8 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            background: #f0f2f5;
+            background: #0f172a; /* deep dark blue */
+            color: #e2e8f0;
         }
 
         .container {
@@ -34,16 +34,17 @@
             padding: 0 20px;
         }
 
-        /* Header styles */
+        /* Header */
         .main-header {
-            background: linear-gradient(135deg, #1e3c72, #2a5298);
-            color: white;
-            padding: 1.5rem 0;
+            background-color: #111827;
+            color: #60a5fa;
+            padding: 1rem 0;
             position: fixed;
             width: 100%;
             top: 0;
             z-index: 1000;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+            border-bottom: 1px solid #1e40af;
         }
 
         .header-content {
@@ -53,15 +54,12 @@
         }
 
         .logo {
-            font-size: 1.8rem;
-            font-weight: 500;
-            color: #fff;
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: #60a5fa;
             text-decoration: none;
-            text-transform: uppercase;
-            letter-spacing: 1px;
         }
 
-        /* Desktop navigation */
         .desktop-nav ul {
             display: flex;
             list-style: none;
@@ -69,20 +67,34 @@
         }
 
         .desktop-nav a {
-            color: white;
+            color: #e0f2fe;
             text-decoration: none;
-            font-size: 1.1rem;
-            padding: 8px 16px;
-            border-radius: 25px;
+            font-size: 1rem;
+            padding: 6px 12px;
+            border-radius: 6px;
             transition: all 0.3s ease;
         }
 
         .desktop-nav a:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
+            background: #1e40af;
+            color: #fff;
         }
 
-        /* Sidebar for mobile */
+        .btn-danger {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .btn-danger:hover {
+            background-color: #2563eb;
+        }
+
+        /* Sidebar */
         .sidebar {
             height: 100%;
             width: 0;
@@ -90,7 +102,7 @@
             z-index: 1001;
             top: 0;
             left: 0;
-            background: linear-gradient(180deg, #2a5298, #1e3c72);
+            background: #1e293b;
             overflow-x: hidden;
             transition: width 0.4s ease-in-out;
             padding-top: 70px;
@@ -101,13 +113,13 @@
             padding: 15px 25px;
             text-decoration: none;
             font-size: 1.2rem;
-            color: white;
+            color: #e2e8f0;
             display: block;
             transition: background 0.3s ease;
         }
 
         .sidebar a:hover {
-            background: rgba(255, 255, 255, 0.15);
+            background: #1e40af;
         }
 
         .menu-btn {
@@ -125,7 +137,6 @@
             transform: scale(1.1);
         }
 
-        /* Main content */
         .content-container {
             margin-top: 90px;
             flex: 1;
@@ -134,11 +145,23 @@
 
         /* Footer */
         .main-footer {
-            background: linear-gradient(135deg, #2a5298, #1e3c72);
-            color: white;
-            padding: 2rem 0;
-            box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.2);
-            z-index: 1000;
+            background-color: #111827;
+            color: #94a3b8;
+            text-align: center;
+            padding: 1.5rem 0;
+            font-size: 0.9rem;
+            border-top: 1px solid #1e40af;
+        }
+
+        .main-footer a {
+            color: #60a5fa;
+            text-decoration: none;
+            margin: 0 10px;
+            transition: color 0.3s ease;
+        }
+
+        .main-footer a:hover {
+            color: #93c5fd;
         }
 
         .main-footer .social-links {
@@ -158,7 +181,6 @@
             transform: scale(1.2);
         }
 
-        /* Media Queries */
         @media (max-width: 768px) {
             .desktop-nav {
                 display: none;
@@ -198,7 +220,6 @@
                         <li><a href="{% url 'signup' %}" class="nav-link">Signup</a></li>
                         <li><a href="{% url 'login' %}" class="nav-link">Login</a></li>
                         {% else %}
-                        <!-- <li><a href="{% url 'logout' %}" class="nav-link">Logout</a></li> -->
                         <form id="logout-form" action="{% url 'logout' %}" method="post" style="display: inline;">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-danger" onclick="redirectToHome()">Logout</button>
@@ -216,7 +237,6 @@
         <a href="{% url 'signup' %}">Signup</a>
         <a href="{% url 'login' %}">Login</a>
         {% else %}
-        <!-- <a href="{% url 'logout' %}">Logout</a> -->
         <form id="logout-form" action="{% url 'logout' %}" method="post" style="display: inline;">
             {% csrf_token %}
             <button type="submit" class="btn btn-danger" onclick="redirectToHome()">Logout</button>
@@ -249,7 +269,6 @@
             sidebar.style.width = sidebar.style.width === "280px" ? "0" : "280px";
         }
 
-        // Close sidebar when clicking outside on mobile
         document.addEventListener('click', function(event) {
             const sidebar = document.getElementById("sidebar");
             const menuBtn = document.querySelector('.menu-btn');
@@ -260,7 +279,6 @@
     </script>
 
     {% block extra_js %}
-    <!-- Additional JavaScript files can be added here -->
     {% endblock %}
 </body>
 </html>
