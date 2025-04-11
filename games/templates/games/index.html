@@ -1,279 +1,122 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    {% load static %}
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Game Platform</title>
-
     <link rel="stylesheet" href="{% static 'css/games/home.css' %}">
     <link rel="stylesheet" href="{% static 'css/games/index.css' %}">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&family=Poppins:wght@300;400&display=swap" rel="stylesheet">
-    <meta name="description" content="A platform for online multiplayer games, including Snake, Agar.io, Chess, and more. Join now!">
-    <meta name="keywords" content="games, multiplayer, online, Snake, Agar.io, Chess">
-
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'Poppins', sans-serif;
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            background: #000;
-        }
-
-        .container {
-            max-width: 1300px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-
-        /* HEADER */
-        .main-header {
-            background-color: #2c3e50; /* Matching screenshot color */
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: black;
             color: white;
-            padding: 1.2rem 0;
-            position: fixed;
-            width: 100%;
-            top: 0;
-            z-index: 1000;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
         }
 
-        .header-content {
+        .main-header {
+            background-color: #2c3e50;
+            padding: 0.6rem 1rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            font-weight: bold;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+            z-index: 1000;
         }
 
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 600;
+        .main-header h1 {
+            margin: 0;
+            font-size: 1.3rem;
             color: white;
-            text-decoration: none;
-            text-transform: uppercase;
-            letter-spacing: 1px;
         }
 
-        .desktop-nav ul {
+        .nav-buttons {
             display: flex;
-            list-style: none;
-            gap: 25px;
+            gap: 1rem;
+            align-items: center;
         }
 
-        .desktop-nav a {
+        .nav-buttons a {
             color: white;
             text-decoration: none;
-            font-size: 1rem;
-            padding: 6px 14px;
-            border-radius: 20px;
-            transition: background 0.3s ease;
+            transition: color 0.3s ease;
         }
 
-        .desktop-nav a:hover {
-            background: rgba(255, 255, 255, 0.2);
+        .nav-buttons a:hover {
+            color: #3498db;
         }
 
-        .btn.btn-danger {
+        .logout-button {
             background-color: #3498db;
             color: white;
+            padding: 0.4rem 0.8rem;
             border: none;
-            padding: 6px 12px;
-            border-radius: 8px;
+            border-radius: 4px;
             cursor: pointer;
-            transition: background 0.3s ease;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
         }
 
-        .btn.btn-danger:hover {
+        .logout-button:hover {
             background-color: #2980b9;
         }
 
-        .menu-btn {
-            display: none;
-            font-size: 26px;
-            background: none;
-            border: none;
-            color: white;
-            cursor: pointer;
-        }
-
-        /* SIDEBAR */
-        .sidebar {
-            height: 100%;
-            width: 0;
-            position: fixed;
-            z-index: 1001;
-            top: 0;
-            left: 0;
-            background-color: #2c3e50;
-            overflow-x: hidden;
-            transition: width 0.3s ease-in-out;
-            padding-top: 70px;
-        }
-
-        .sidebar a {
-            padding: 15px 25px;
-            text-decoration: none;
-            font-size: 1.1rem;
-            color: white;
-            display: block;
-            transition: background 0.3s ease;
-        }
-
-        .sidebar a:hover {
-            background: rgba(255, 255, 255, 0.15);
-        }
-
-        /* MAIN CONTENT */
-        .content-container {
-            flex: 1;
-            margin-top: 90px;
-            padding: 20px 0;
-        }
-
-        /* FOOTER */
         .main-footer {
-            background-color: #2c3e50; /* Match header */
+            background-color: #2c3e50 !important;
             color: white;
             text-align: center;
-            padding: 2rem 0 1rem;
+            padding: 1rem 0 0.5rem;
             margin-top: auto;
             box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.4);
             z-index: 1000;
         }
 
         .main-footer a {
-            color: #ccc;
+            color: white;
             text-decoration: none;
-            margin: 0 10px;
-            font-size: 0.9rem;
+            margin: 0 1rem;
         }
 
         .main-footer a:hover {
             text-decoration: underline;
         }
 
-        .main-footer .social-links {
-            margin-top: 10px;
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-        }
-
-        .main-footer .social-icon img {
-            width: 22px;
-            height: 22px;
-            transition: transform 0.3s ease;
-        }
-
-        .main-footer .social-icon:hover img {
-            transform: scale(1.2);
-        }
-
-        /* RESPONSIVE */
-        @media (max-width: 768px) {
-            .desktop-nav {
-                display: none;
-            }
-
-            .menu-btn {
-                display: block;
-            }
-
-            .logo {
-                font-size: 1.3rem;
-            }
-        }
-
-        @media (min-width: 769px) {
-            .sidebar {
-                display: none;
-            }
+        .content {
+            flex: 1;
         }
     </style>
 </head>
-
 <body>
+    <!-- Header -->
     <header class="main-header">
-        <div class="container">
-            <div class="header-content">
-                <h1><a href="{% url 'home' %}" class="logo">Game Platform</a></h1>
-                <button class="menu-btn" onclick="toggleNav()">☰</button>
-                <nav class="desktop-nav">
-                    <ul>
-                        <li><a href="{% url 'home' %}">Home</a></li>
-                        {% if not user.is_authenticated %}
-                        <li><a href="{% url 'signup' %}">Signup</a></li>
-                        <li><a href="{% url 'login' %}">Login</a></li>
-                        {% else %}
-                        <form id="logout-form" action="{% url 'logout' %}" method="post" style="display: inline;">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-danger" onclick="redirectToHome()">Logout</button>
-                        </form>
-                        {% endif %}
-                    </ul>
-                </nav>
-            </div>
+        <h1>GAME PLATFORM</h1>
+        <div class="nav-buttons">
+            <a href="{% url 'index' %}">Home</a>
+            <form method="post" action="{% url 'logout' %}" style="margin: 0;">
+                {% csrf_token %}
+                <button type="submit" class="logout-button">Logout</button>
+            </form>
         </div>
     </header>
 
-    <div id="sidebar" class="sidebar">
-        <a href="{% url 'home' %}">Home</a>
-        {% if not user.is_authenticated %}
-        <a href="{% url 'signup' %}">Signup</a>
-        <a href="{% url 'login' %}">Login</a>
-        {% else %}
-        <form id="logout-form" action="{% url 'logout' %}" method="post" style="display: inline;">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-danger" onclick="redirectToHome()">Logout</button>
-        </form>
-        {% endif %}
+    <!-- Main Content -->
+    <div class="content">
+        {% block content %}
+        {% endblock %}
     </div>
 
-    <main class="content-container">
-        <div class="container">
-            {% block content %}
-            <!-- Dynamic content here -->
-            {% endblock %}
-        </div>
-    </main>
-
+    <!-- Footer -->
     <footer class="main-footer">
-        <div class="container">
-            <p>© {{ year }} Game Platform All Rights Reserved</p>
-            <div class="footer-links">
-                <a href="#">Privacy Policy</a>
-                <a href="#">Terms of Service</a>
-                <a href="#">Contact Us</a>
-            </div>
-            <ul class="social-links">
-                <li><a href="#" target="_blank" class="social-icon"><img src="{% static 'images/facebook-icon.svg' %}" alt="Facebook"></a></li>
-                <li><a href="#" target="_blank" class="social-icon"><img src="{% static 'images/twitter-icon.svg' %}" alt="Twitter"></a></li>
-                <li><a href="#" target="_blank" class="social-icon"><img src="{% static 'images/instagram-icon.svg' %}" alt="Instagram"></a></li>
-            </ul>
+        <p>&copy; Game Platform All Rights Reserved</p>
+        <div>
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Contact Us</a>
         </div>
     </footer>
-
-    <script>
-        function toggleNav() {
-            const sidebar = document.getElementById("sidebar");
-            sidebar.style.width = sidebar.style.width === "280px" ? "0" : "280px";
-        }
-
-        document.addEventListener('click', function(event) {
-            const sidebar = document.getElementById("sidebar");
-            const menuBtn = document.querySelector('.menu-btn');
-            if (window.innerWidth <= 768 && !sidebar.contains(event.target) && !menuBtn.contains(event.target)) {
-                sidebar.style.width = "0";
-            }
-        });
-    </script>
-
-    {% block extra_js %}{% endblock %}
 </body>
 </html>
