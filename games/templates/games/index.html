@@ -1,5 +1,3 @@
-index.html : header footer
--------------------------------------------------------------------------------------------------------------------------------------------
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,7 +13,6 @@ index.html : header footer
     <meta name="keywords" content="games, multiplayer, online, Snake, Agar.io, Chess">
 
     <style>
-        /* Base styles */
         * {
             margin: 0;
             padding: 0;
@@ -36,16 +33,15 @@ index.html : header footer
             padding: 0 20px;
         }
 
-        /* Header styles */
+        /* Header */
         .main-header {
-            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            background: #2d3e50;
             color: white;
-            padding: 1.5rem 0;
-            position: fixed;
+            padding: 0.8rem 0;
             width: 100%;
-            top: 0;
+            position: relative;
             z-index: 1000;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
 
         .header-content {
@@ -55,36 +51,51 @@ index.html : header footer
         }
 
         .logo {
-            font-size: 1.8rem;
-            font-weight: 500;
+            font-size: 1.4rem;
+            font-weight: 600;
             color: #fff;
             text-decoration: none;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
 
-        /* Desktop navigation */
         .desktop-nav ul {
             display: flex;
             list-style: none;
-            gap: 30px;
+            gap: 20px;
+            align-items: center;
         }
 
         .desktop-nav a {
             color: white;
             text-decoration: none;
-            font-size: 1.1rem;
-            padding: 8px 16px;
-            border-radius: 25px;
+            font-size: 1rem;
+            padding: 6px 12px;
+            border-radius: 20px;
             transition: all 0.3s ease;
         }
 
         .desktop-nav a:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.1);
         }
 
-        /* Sidebar for mobile */
+        #logout-form .btn {
+            background-color: #3498db;
+            border: none;
+            color: white;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-family: 'Poppins', sans-serif;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        #logout-form .btn:hover {
+            background-color: #2980b9;
+        }
+
+        /* Sidebar */
         .sidebar {
             height: 100%;
             width: 0;
@@ -92,7 +103,7 @@ index.html : header footer
             z-index: 1001;
             top: 0;
             left: 0;
-            background: linear-gradient(180deg, #2a5298, #1e3c72);
+            background: #2d3e50;
             overflow-x: hidden;
             transition: width 0.4s ease-in-out;
             padding-top: 70px;
@@ -127,7 +138,6 @@ index.html : header footer
             transform: scale(1.1);
         }
 
-        /* Main content */
         .content-container {
             margin-top: 90px;
             flex: 1;
@@ -136,23 +146,33 @@ index.html : header footer
 
         /* Footer */
         .main-footer {
-            background: linear-gradient(135deg, #2a5298, #1e3c72);
-            color: white;
+            background: #2d3e50;
+            color: #ccc;
             padding: 2rem 0;
-            box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.2);
-            z-index: 1000;
+            text-align: center;
+            font-size: 0.95rem;
+        }
+
+        .main-footer .footer-logo {
+            color: white;
+            font-weight: 500;
+            text-decoration: none;
+        }
+
+        .main-footer .footer-logo:hover {
+            text-decoration: underline;
         }
 
         .main-footer .social-links {
             display: flex;
-            gap: 15px;
             justify-content: center;
-            margin-top: 10px;
+            gap: 20px;
+            margin-top: 1rem;
         }
 
         .main-footer .social-icon img {
-            width: 24px;
-            height: 24px;
+            width: 26px;
+            height: 26px;
             transition: transform 0.3s ease;
         }
 
@@ -160,7 +180,6 @@ index.html : header footer
             transform: scale(1.2);
         }
 
-        /* Media Queries */
         @media (max-width: 768px) {
             .desktop-nav {
                 display: none;
@@ -175,7 +194,7 @@ index.html : header footer
             }
 
             .logo {
-                font-size: 1.5rem;
+                font-size: 1.3rem;
             }
         }
 
@@ -200,10 +219,9 @@ index.html : header footer
                         <li><a href="{% url 'signup' %}" class="nav-link">Signup</a></li>
                         <li><a href="{% url 'login' %}" class="nav-link">Login</a></li>
                         {% else %}
-                        <!-- <li><a href="{% url 'logout' %}" class="nav-link">Logout</a></li> -->
                         <form id="logout-form" action="{% url 'logout' %}" method="post" style="display: inline;">
                             {% csrf_token %}
-                            <button type="submit" class="btn btn-danger" onclick="redirectToHome()">Logout</button>
+                            <button type="submit" class="btn" onclick="redirectToHome()">Logout</button>
                         </form>
                         {% endif %}
                     </ul>
@@ -218,10 +236,9 @@ index.html : header footer
         <a href="{% url 'signup' %}">Signup</a>
         <a href="{% url 'login' %}">Login</a>
         {% else %}
-        <!-- <a href="{% url 'logout' %}">Logout</a> -->
         <form id="logout-form" action="{% url 'logout' %}" method="post" style="display: inline;">
             {% csrf_token %}
-            <button type="submit" class="btn btn-danger" onclick="redirectToHome()">Logout</button>
+            <button type="submit" class="btn" onclick="redirectToHome()">Logout</button>
         </form>
         {% endif %}
     </div>
@@ -237,11 +254,11 @@ index.html : header footer
     <footer class="main-footer">
         <div class="container">
             <p>© {{ year }} <a href="{% url 'home' %}" class="footer-logo">Game Platform</a>. All Rights Reserved.</p>
-            <ul class="social-links">
-                <li><a href="#" target="_blank" class="social-icon"><img src="{% static 'images/facebook-icon.svg' %}" alt="Facebook"></a></li>
-                <li><a href="#" target="_blank" class="social-icon"><img src="{% static 'images/twitter-icon.svg' %}" alt="Twitter"></a></li>
-                <li><a href="#" target="_blank" class="social-icon"><img src="{% static 'images/instagram-icon.svg' %}" alt="Instagram"></a></li>
-            </ul>
+            <div class="social-links">
+                <a href="#" target="_blank" class="social-icon"><img src="{% static 'images/facebook-icon.svg' %}" alt="Facebook"></a>
+                <a href="#" target="_blank" class="social-icon"><img src="{% static 'images/twitter-icon.svg' %}" alt="Twitter"></a>
+                <a href="#" target="_blank" class="social-icon"><img src="{% static 'images/instagram-icon.svg' %}" alt="Instagram"></a>
+            </div>
         </div>
     </footer>
 
@@ -251,7 +268,6 @@ index.html : header footer
             sidebar.style.width = sidebar.style.width === "280px" ? "0" : "280px";
         }
 
-        // Close sidebar when clicking outside on mobile
         document.addEventListener('click', function(event) {
             const sidebar = document.getElementById("sidebar");
             const menuBtn = document.querySelector('.menu-btn');
@@ -262,7 +278,6 @@ index.html : header footer
     </script>
 
     {% block extra_js %}
-    <!-- Additional JavaScript files can be added here -->
     {% endblock %}
 </body>
 </html>
