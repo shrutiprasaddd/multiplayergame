@@ -9,76 +9,100 @@
     <link rel="stylesheet" href="{% static 'css/games/home.css' %}">
     <link rel="stylesheet" href="{% static 'css/games/index.css' %}">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&family=Poppins:wght@300;400&display=swap" rel="stylesheet">
+    <meta name="description" content="A platform for online multiplayer games, including Snake, Agar.io, Chess, and more. Join now!">
+    <meta name="keywords" content="games, multiplayer, online, Snake, Agar.io, Chess">
 
     <style>
-        /* Base styles */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-    
+
         body {
             font-family: 'Poppins', sans-serif;
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            background: #f0f2f5;
+            background: #000;
         }
-    
+
         .container {
             max-width: 1300px;
             margin: 0 auto;
             padding: 0 20px;
         }
-    
-        /* Header styles */
+
+        /* HEADER */
         .main-header {
-            background: linear-gradient(135deg, #1e1e2f, #34344e);
+            background-color: #2c3e50; /* Matching screenshot color */
             color: white;
-            padding: 1.5rem 0;
+            padding: 1.2rem 0;
             position: fixed;
             width: 100%;
             top: 0;
             z-index: 1000;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
         }
-    
+
         .header-content {
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-    
+
         .logo {
-            font-size: 1.8rem;
-            font-weight: 500;
-            color: #fff;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: white;
             text-decoration: none;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
-    
+
         .desktop-nav ul {
             display: flex;
             list-style: none;
-            gap: 30px;
+            gap: 25px;
         }
-    
+
         .desktop-nav a {
             color: white;
             text-decoration: none;
-            font-size: 1.1rem;
-            padding: 8px 16px;
-            border-radius: 25px;
-            transition: all 0.3s ease;
+            font-size: 1rem;
+            padding: 6px 14px;
+            border-radius: 20px;
+            transition: background 0.3s ease;
         }
-    
+
         .desktop-nav a:hover {
             background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
         }
-    
+
+        .btn.btn-danger {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .btn.btn-danger:hover {
+            background-color: #2980b9;
+        }
+
+        .menu-btn {
+            display: none;
+            font-size: 26px;
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+        }
+
+        /* SIDEBAR */
         .sidebar {
             height: 100%;
             width: 0;
@@ -86,98 +110,92 @@
             z-index: 1001;
             top: 0;
             left: 0;
-            background: linear-gradient(135deg, #1e1e2f, #34344e);
+            background-color: #2c3e50;
             overflow-x: hidden;
-            transition: width 0.4s ease-in-out;
+            transition: width 0.3s ease-in-out;
             padding-top: 70px;
-            box-shadow: 4px 0 15px rgba(0, 0, 0, 0.3);
         }
-    
+
         .sidebar a {
             padding: 15px 25px;
             text-decoration: none;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             color: white;
             display: block;
             transition: background 0.3s ease;
         }
-    
+
         .sidebar a:hover {
             background: rgba(255, 255, 255, 0.15);
         }
-    
-        .menu-btn {
-            display: none;
-            font-size: 28px;
-            cursor: pointer;
-            background: none;
-            border: none;
-            color: white;
-            padding: 5px 10px;
-            transition: transform 0.3s ease;
-        }
-    
-        .menu-btn:hover {
-            transform: scale(1.1);
-        }
-    
+
+        /* MAIN CONTENT */
         .content-container {
-            margin-top: 100px;
             flex: 1;
+            margin-top: 90px;
             padding: 20px 0;
         }
-    
-        /* Footer - updated with same header color */
+
+        /* FOOTER */
         .main-footer {
-            background: linear-gradient(135deg, #1e1e2f, #34344e);
+            background-color: #2c3e50; /* Match header */
             color: white;
-            padding: 2rem 0;
-            box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.3);
-            z-index: 1001;
+            text-align: center;
+            padding: 2rem 0 1rem;
             margin-top: auto;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.4);
+            z-index: 1000;
         }
-    
+
+        .main-footer a {
+            color: #ccc;
+            text-decoration: none;
+            margin: 0 10px;
+            font-size: 0.9rem;
+        }
+
+        .main-footer a:hover {
+            text-decoration: underline;
+        }
+
         .main-footer .social-links {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
             margin-top: 10px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
         }
-    
+
         .main-footer .social-icon img {
-            width: 24px;
-            height: 24px;
+            width: 22px;
+            height: 22px;
             transition: transform 0.3s ease;
         }
-    
+
         .main-footer .social-icon:hover img {
             transform: scale(1.2);
         }
-    
+
+        /* RESPONSIVE */
         @media (max-width: 768px) {
             .desktop-nav {
                 display: none;
             }
-    
+
             .menu-btn {
                 display: block;
             }
-    
-            .content-container {
-                margin-top: 80px;
-            }
-    
+
             .logo {
-                font-size: 1.5rem;
+                font-size: 1.3rem;
             }
         }
-    
+
         @media (min-width: 769px) {
             .sidebar {
                 display: none;
             }
         }
-    </style>    
+    </style>
 </head>
 
 <body>
@@ -188,10 +206,10 @@
                 <button class="menu-btn" onclick="toggleNav()">☰</button>
                 <nav class="desktop-nav">
                     <ul>
-                        <li><a href="{% url 'home' %}" class="nav-link">Home</a></li>
+                        <li><a href="{% url 'home' %}">Home</a></li>
                         {% if not user.is_authenticated %}
-                        <li><a href="{% url 'signup' %}" class="nav-link">Signup</a></li>
-                        <li><a href="{% url 'login' %}" class="nav-link">Login</a></li>
+                        <li><a href="{% url 'signup' %}">Signup</a></li>
+                        <li><a href="{% url 'login' %}">Login</a></li>
                         {% else %}
                         <form id="logout-form" action="{% url 'logout' %}" method="post" style="display: inline;">
                             {% csrf_token %}
@@ -220,14 +238,19 @@
     <main class="content-container">
         <div class="container">
             {% block content %}
-            <!-- Dynamic content will be injected here -->
+            <!-- Dynamic content here -->
             {% endblock %}
         </div>
     </main>
 
     <footer class="main-footer">
         <div class="container">
-            <p>© {{ year }} <a href="{% url 'home' %}" class="footer-logo">Game Platform</a>. All Rights Reserved.</p>
+            <p>© {{ year }} Game Platform All Rights Reserved</p>
+            <div class="footer-links">
+                <a href="#">Privacy Policy</a>
+                <a href="#">Terms of Service</a>
+                <a href="#">Contact Us</a>
+            </div>
             <ul class="social-links">
                 <li><a href="#" target="_blank" class="social-icon"><img src="{% static 'images/facebook-icon.svg' %}" alt="Facebook"></a></li>
                 <li><a href="#" target="_blank" class="social-icon"><img src="{% static 'images/twitter-icon.svg' %}" alt="Twitter"></a></li>
@@ -251,8 +274,6 @@
         });
     </script>
 
-    {% block extra_js %}
-    <!-- Additional JavaScript files can be added here -->
-    {% endblock %}
+    {% block extra_js %}{% endblock %}
 </body>
 </html>
