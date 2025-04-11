@@ -283,3 +283,12 @@ def snake(request, room_code):
 
 def football(request,room_code):
     pass
+
+
+def get_players(request, room_code):
+    try:
+        game_room = GameRoom.objects.get(room_code=room_code)
+        players = game_room.players.all()
+        return JsonResponse({'players': [p.username for p in players]})
+    except GameRoom.DoesNotExist:
+        return JsonResponse({'players': []})
