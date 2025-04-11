@@ -44,7 +44,7 @@
             {% for room in public_rooms %}
                 <a href="{% url 'game_lobby' room_code=room.room_code game_id=game.game_id %}" class="room-link">
                     Join Room {{ room.room_code }}
-                </a><br>
+                </a>
             {% endfor %}
         {% else %}
             <p>No public rooms available.</p>

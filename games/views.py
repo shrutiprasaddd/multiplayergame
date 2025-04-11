@@ -147,6 +147,30 @@ def game_room_views(request, game_id):
                 room.save()
 
                 return JsonResponse({'room_code': room.room_code, 'game_id': game_id})
+            
+            elif game.slug == "ludo":
+                # Find an available room with less than 4 players
+                room = GameRoom.objects.filter(game=game, is_active=True, is_private=False).annotate(
+                    player_count=Count('players')
+                ).filter(player_count__lt=4).first()
+
+                if room:
+                    room.players.add(request.user)
+                    if room.players.count() == 4:
+                        room.is_started = True  # Start game when 4 players join
+                    room.save()
+                else:
+                    # Create a new room if no available room exists
+                    room = GameRoom.objects.create(
+                        game=game,
+                        created_by=request.user,
+                        room_code=str(uuid.uuid4())[:8].upper(),
+                        is_private=False
+                    )
+                    room.players.add(request.user)
+                    room.save()
+
+                return JsonResponse({'room_code': room.room_code, 'game_id': game_id})
 
         elif action == 'create_private_room':
             # Create a private room
@@ -193,6 +217,9 @@ def game_room_views(request, game_id):
 
 
 from django.urls import reverse
+from django.http import JsonResponse
+from django.shortcuts import render, redirect
+from .models import GameRoom
 
 def game_lobby(request, room_code, game_id):
     game_room = GameRoom.objects.get(room_code=room_code)
@@ -209,13 +236,24 @@ def game_lobby(request, room_code, game_id):
         game_room.is_started = True
         game_room.save()
 
-        # Redirect to the appropriate game start view
-        return redirect(reverse('start_game', kwargs={'room_code': room_code, 'game_id': game_id}))
+        # Get the redirect URL
+        redirect_url = reverse('start_game', kwargs={'room_code': room_code, 'game_id': game_id})
+
+        # If AJAX request, return JSON with redirect URL
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'redirect': redirect_url})
+
+        # Otherwise, perform normal redirect
+        return redirect(redirect_url)
 
     return render(request, 'games/game_lobby.html', {'game_room': game_room, 'players': players})
 
 
+# games/views.py
 from django.http import HttpResponseNotFound
+from django.shortcuts import render, redirect
+from django.urls import reverse
+from .models import Game, GameRoom, PlayerStatus
 
 def start_game(request, room_code, game_id):
     try:
@@ -223,9 +261,7 @@ def start_game(request, room_code, game_id):
         game = Game.objects.get(game_id=game_id)
         
         if game_room.game.game_id != game_id:
-            # Redirect to lobby if the game ID doesn't match
             return redirect('game_lobby', room_code=room_code, game_id=game_id)
-        
         if game.slug == "chess":
             return render(request, 'games/chess.html', {'game_room': game_room})
         elif game.slug == "Agar.io":
@@ -242,16 +278,33 @@ def start_game(request, room_code, game_id):
                     'score': player_status.score if player_status else 0,  # Default score to 0 if no status found
                 })
             return render(request, 'games/snake.html', {'game_room': game_room, 'players_with_scores': players_with_scores})
+        
+        elif game.slug == "ludo":
+            players_with_positions = []
+            for player in game_room.players.all():
+                player_status, created = PlayerStatus.objects.get_or_create(
+                    user=player,
+                    game_room=game_room,
+                    defaults={
+                        'score': 0,
+                        'current_position': {"piece1": 0, "piece2": 0, "piece3": 0, "piece4": 0}
+                    }
+                )
+                players_with_positions.append({
+                    'username': player.username,
+                    'positions': player_status.current_position,
+                })
+            return render(request, 'games/ludo.html', {
+                'game_room': game_room,
+                'players_with_positions': players_with_positions
+            })
+        # Add other game cases (chess, snake, etc.) as needed
         else:
-            # Handle the case where the game slug doesn't match any known games
             return HttpResponseNotFound("Game not found.")
     except GameRoom.DoesNotExist:
-        # Handle the case where the room does not exist
         return HttpResponseNotFound("Game room not found.")
     except Game.DoesNotExist:
-        # Handle the case where the game does not exist
         return HttpResponseNotFound("Game not found.")
-
 
 from django.shortcuts import render
 from .models import GameRoom
@@ -283,3 +336,24 @@ def snake(request, room_code):
 
 def football(request,room_code):
     pass
+
+# games/views.py
+def ludo(request, room_code):
+    try:
+        game_room = GameRoom.objects.get(room_code=room_code)
+        if not game_room.is_active or game_room.game.slug != "ludo":
+            return redirect('game_lobby', room_code=room_code, game_id=game_room.game.game_id)
+        return render(request, 'games/ludo.html', {'game_room': game_room})
+    except GameRoom.DoesNotExist:
+        return HttpResponseNotFound("Game room not found.")
+
+
+from django.http import JsonResponse
+from .models import GameRoom
+def get_players(request, room_code):
+    try:
+        game_room = GameRoom.objects.get(room_code=room_code)
+        players = game_room.players.all()
+        return JsonResponse({'players': [p.username for p in players]})
+    except GameRoom.DoesNotExist:
+        return JsonResponse({'players': []})

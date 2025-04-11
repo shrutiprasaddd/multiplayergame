@@ -14,4 +14,6 @@ urlpatterns = [
     path('chess/<str:room_code>', views.chess, name='chess'),
     # path('agar/', views.agar, name='agar'),
     path('snake/<str:room_code>', views.snake, name='snake'),
+    path('ludo/<str:room_code>',views.ludo, name='ludo'),
+    path('get_players/<str:room_code>/', views.get_players, name='get_players')
 ]

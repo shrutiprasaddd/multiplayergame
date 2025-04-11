@@ -73,16 +73,21 @@ class GameRoom(models.Model):
             raise ValueError("Room is full.")
 
 # Model to track player readiness in a game room
+# Model to track player readiness in a game room
+# games/models.py (Update PlayerStatus)
 class PlayerStatus(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     game_room = models.ForeignKey(GameRoom, on_delete=models.CASCADE)
     score = models.IntegerField(default=0)
-    
-    #is_ready = models.BooleanField(default=False)
+    current_position = models.JSONField(default=dict)  # For Ludo: {"piece1": 0, "piece2": 0, "piece3": 0, "piece4": 0}
+    is_ready = models.BooleanField(default=False)  # Track if player is ready to start
+    color = models.CharField(max_length=20, blank=True, null=True)  # Ludo player color (e.g., red, blue, green, yellow)
+
+    class Meta:
+        unique_together = ('user', 'game_room')
 
     def __str__(self):
-        return f"{self.user.username} - {self.game_room.room_code} - {'Ready' if self.is_ready else 'Not Ready'}"
-
+        return f"{self.user.username} - {self.game_room.room_code}"
 # Model to log player actions in a game room
 class ActivityLog(models.Model):
     game_room = models.ForeignKey(GameRoom, on_delete=models.CASCADE)

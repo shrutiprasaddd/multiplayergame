@@ -174,160 +174,6 @@ class ChessConsumer(AsyncWebsocketConsumer):
             'message': event['message']
         }))
 
-# class GameConsumer(AsyncWebsocketConsumer):
-#     async def connect(self):
-#         self.room_code = self.scope['url_route']['kwargs']['room_code']
-
-#         # Get the game room from the database
-#         self.game_room = await self.get_game_room(self.room_code)
-#         self.user = self.scope["user"]
-
-#         # Ensure the user is part of the game room
-#         if not await self.is_user_in_game(self.user, self.game_room):
-#             await self.close()
-#             return
-
-#         self.room_group_name = f"game_{self.room_code}"
-
-#         # Join room group
-#         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
-
-#         # Accept the WebSocket connection
-#         await self.accept()
-
-#         # Notify all players about the new connection
-#         await self.channel_layer.group_send(
-#             self.room_group_name,
-#             {
-#                 'type': 'player_join',  # Type of message
-#                 'player': self.user.username,
-#             }
-#         )
-
-#     @database_sync_to_async
-#     def get_game_room(self, room_code):
-#         print(room_code)
-#         return GameRoom.objects.get(room_code=room_code)
-
-#     @database_sync_to_async
-#     def is_user_in_game(self, user, game_room):
-#         return user in game_room.players.all()
-
-#     @database_sync_to_async
-#     def get_player_status(self, user, game_room):
-#         return PlayerStatus.objects.get(user=user, game_room=game_room)
-
-#     async def disconnect(self, close_code):
-#         # Leave room group when player disconnects
-#         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
-
-#     async def receive(self, text_data):
-#         data = json.loads(text_data)
-#         action = data.get('type')
-
-#         if action == 'move':
-#             # Extract move details
-#             move = data['move']
-#             board = data['board']
-
-#             # Broadcast updated board and move to all players
-#             await self.channel_layer.group_send(
-#                 self.room_group_name,
-#                 {
-#                     'type': 'chess_move_update',
-#                     'player': self.user.username,
-#                     'move': move,
-#                     'board': board,  # Send the updated board
-#                 }
-#             )
-
-#         elif action == 'update_score':
-#             # Update score and send leaderboard update
-#             player_status = await self.get_player_status(self.user, self.game_room)
-#             player_status.score += int(data['score'])
-#             player_status.save()
-
-#             leaderboard = [
-#                 {'username': player.user.username, 'score': player.score}
-#                 for player in PlayerStatus.objects.filter(game_room=self.game_room).order_by('-score')
-#             ]
-#             await self.channel_layer.group_send(
-#                 self.room_group_name,
-#                 {
-#                     'type': 'leaderboard_update',
-#                     'leaderboard': leaderboard,
-#                 }
-#             )
-
-#         elif data.get('type') == 'move':
-#             # Handle move (broadcast to all connected players)
-#             move = data['move']
-#             print("consumer.py move: ",move)
-
-#             await self.channel_layer.group_send(
-#                 self.room_group_name,
-#                 {
-#                     'type': 'game_event',
-#                     'message': f"Move {move} made by {self.user.username}"
-#                 }
-#             )
-
-#         elif data.get('type') == 'chat_message':
-#             # Broadcast chat message to all players in the room
-#             await self.channel_layer.group_send(
-#                 self.room_group_name,
-#                 {
-#                     'type': 'chat_message',
-#                     'message': data['message']
-#                 }
-#             )
-
-#     async def player_join(self, event):
-#         # Handle the 'player_join' message type
-#         await self.send(text_data=json.dumps({
-#             'type': 'player_join',
-#             'player': event['player'],
-#         }))
-
-#     async def chess_move_update(self, event):
-#         # Send the updated board state to all players
-#         await self.send(text_data=json.dumps({
-#             'type': 'chess_move_update',
-#             'player': event['player'],
-#             'move': event['move'],
-#             'board': event['board'],  # Ensure board is broadcasted
-#         }))
-
-#     async def leaderboard_update(self, event):
-#         # Send updated leaderboard to players
-#         await self.send(text_data=json.dumps({
-#             'type': 'leaderboard_update',
-#             'leaderboard': event['leaderboard'],
-#         }))
-
-#     async def game_event(self, event):
-#         # Handle game event (e.g., move made by player)
-#         message = event['message']
-#         await self.send(text_data=json.dumps({
-#             'type': 'game_event',
-#             'message': message
-#         }))
-
-#     async def chat_message(self, event):
-#         # Broadcast chat message to players
-#         message = event['message']
-#         await self.send(text_data=json.dumps({
-#             'type': 'chat_message',
-#             'message': message
-#         }))
-
-#     async def update_snakes(self, event):
-#         await self.send(text_data=json.dumps({
-#             'type': 'update',
-#             'snakes': event['snakes'],
-#             'player': event['player'],
-#         }))
-
 
 
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -419,38 +265,7 @@ class GameConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
-    # async def receive(self, text_data):
-    #     data = json.loads(text_data)
-    #     action = data.get('type')
-
-    #     if action == 'move':
-    #         move = data['move']
-    #         board = data['board']
-    #         current_player = data['current_player']  # Client suggests the next player
-    #         player = data['player']
-
-    #         # Validate the move if needed (optional server-side check)
-    #         next_player = 'black' if current_player == 'white' else 'white'
-
-    #         await self.channel_layer.group_send(
-    #             self.room_group_name,
-    #             {
-    #                 'type': 'chess_move_update',
-    #                 'player': player,
-    #                 'move': move,
-    #                 'board': board,
-    #                 'current_player': next_player,  # Ensure this is the next player
-    #             }
-    #         )
-
-    #     elif action == 'chat_message':
-    #         await self.channel_layer.group_send(
-    #             self.room_group_name,
-    #             {
-    #                 'type': 'chat_message',
-    #                 'message': data['message']
-    #             }
-    #         )
+   
 
 
     async def receive(self, text_data):
@@ -577,237 +392,6 @@ game_state = {
     "scores": {"teamA": 0, "teamB": 0},
 }
 
-# # football_game/consumers.py
-# import json
-# from channels.generic.websocket import AsyncWebsocketConsumer
-
-# # Global game state (replace with a database or persistent store for production)
-# game_state = {
-#     "players": {},
-#     "scores": {"teamA": 0, "teamB": 0},
-#     "ball": {"x": 400, "y": 300},
-# }
-
-# class FootballGameConsumer(AsyncWebsocketConsumer):
-#     async def connect(self):
-#         self.room_code = self.scope['url_route']['kwargs']['room_code']
-#         self.room_group_name = f"football_{self.room_code}"
-
-#         # Join the group
-#         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
-#         await self.accept()
-
-#         # Assign player ID and team
-#         self.player_id = f"player_{self.channel_name}"
-#         self.team = "A" if len(game_state["players"]) % 2 == 0 else "B"
-#         game_state["players"][self.player_id] = {
-#             "x": 100, "y": 100,
-#             "team": self.team,
-#         }
-
-#         # Send initial state to the player
-#         await self.send(text_data=json.dumps({
-#             "type": "assign_player_id",
-#             "player_id": self.player_id,
-#             "game_state": game_state
-#         }))
-#         await self.broadcast_game_state()
-
-#     async def disconnect(self, close_code):
-#         # Remove player from game state
-#         if self.player_id in game_state["players"]:
-#             del game_state["players"][self.player_id]
-
-#         # Leave the group
-#         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
-#         await self.broadcast_game_state()
-
-#     async def receive(self, text_data):
-#         data = json.loads(text_data)
-#         action = data.get('type')
-
-#         if action == "chat_message":
-#             await self.handle_chat_message(data)
-#         elif action == "player_move":
-#             await self.update_player_position(data)
-#         elif action == "goal_scored":
-#             await self.update_score(data)
-#         elif action == "reaction":
-#             await self.broadcast_reaction(data)
-
-#     async def handle_chat_message(self, data):
-#         message = data.get("message")
-#         player_name = self.player_id
-
-#         # Broadcast message to group
-#         await self.channel_layer.group_send(
-#             self.room_group_name,
-#             {
-#                 "type": "chat_message",
-#                 "player_name": player_name,
-#                 "message": message
-#             }
-#         )
-
-#     async def update_player_position(self, data):
-#         movement = data.get('movement', {})
-#         player = game_state["players"].get(self.player_id)
-#         if player:
-#             player["x"] += movement.get("x", 0) * 5
-#             player["y"] += movement.get("y", 0) * 5
-
-#         await self.broadcast_game_state()
-
-#     async def update_score(self, data):
-#         team = data.get("team")
-#         if team in game_state["scores"]:
-#             game_state["scores"][f"team{team}"] += 1
-#             game_state["ball"] = {"x": 400, "y": 300}
-
-#         await self.broadcast_game_state()
-
-#     async def broadcast_reaction(self, data):
-#         reaction = data.get("reaction")
-#         player_name = self.player_id
-
-#         await self.channel_layer.group_send(
-#             self.room_group_name,
-#             {
-#                 "type": "reaction",
-#                 "player_name": player_name,
-#                 "reaction": reaction
-#             }
-#         )
-
-#     async def broadcast_game_state(self):
-#         await self.channel_layer.group_send(
-#             self.room_group_name,
-#             {
-#                 "type": "game_state_update",
-#                 "game_state": game_state
-#             }
-#         )
-
-#     async def game_state_update(self, event):
-#         await self.send(text_data=json.dumps({
-#             "type": "game_state_update",
-#             "game_state": event["game_state"]
-#         }))
-
-#     async def chat_message(self, event):
-#         await self.send(text_data=json.dumps({
-#             "type": "chat_message",
-#             "player_name": event["player_name"],
-#             "message": event["message"]
-#         }))
-
-#     async def reaction(self, event):
-#         await self.send(text_data=json.dumps({
-#             "type": "reaction",
-#             "player_name": event["player_name"],
-#             "reaction": event["reaction"]
-#         }))
-
-
-
-
-# # football_game/consumers.py
-# from channels.generic.websocket import AsyncWebsocketConsumer
-# import json
-
-# game_state = {
-#     "players": {},
-#     "ball": {"x": 500, "y": 300, "vx": 0, "vy": 0},
-#     "scores": {"A": 0, "B": 0}
-# }
-
-# class FootballGameConsumer(AsyncWebsocketConsumer):
-#     async def connect(self):
-#         self.room_code = self.scope['url_route']['kwargs']['room_code']
-#         self.room_group_name = f"football_{self.room_code}"
-
-#         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
-#         await self.accept()
-
-#         # Assign player ID and team
-#         self.player_id = f"player_{self.channel_name}"
-#         team_a_count = sum(1 for p in game_state["players"].values() if p["team"] == "A")
-#         team_b_count = sum(1 for p in game_state["players"].values() if p["team"] == "B")
-        
-#         self.team = "A" if team_a_count <= team_b_count else "B"
-        
-#         # Initial positions based on role and team
-#         position = {"x": 500, "y": 300}  # Default center
-#         if team_a_count + team_b_count < 8:  # Max 4 per team
-#             if self.team == "A":
-#                 if team_a_count == 0:  # Goalkeeper
-#                     position = {"x": 50, "y": 300, "role": "goalkeeper"}
-#                 elif team_a_count == 1:
-#                     position = {"x": 250, "y": 200}
-#                 elif team_a_count == 2:
-#                     position = {"x": 250, "y": 400}
-#                 elif team_a_count == 3:
-#                     position = {"x": 400, "y": 300}
-#             else:  # Team B
-#                 if team_b_count == 0:  # Goalkeeper
-#                     position = {"x": 950, "y": 300, "role": "goalkeeper"}
-#                 elif team_b_count == 1:
-#                     position = {"x": 750, "y": 200}
-#                 elif team_b_count == 2:
-#                     position = {"x": 750, "y": 400}
-#                 elif team_b_count == 3:
-#                     position = {"x": 600, "y": 300}
-
-#             game_state["players"][self.player_id] = {
-#                 "x": position["x"],
-#                 "y": position["y"],
-#                 "team": self.team,
-#                 "role": position.get("role", "field")
-#             }
-
-#         await self.send(text_data=json.dumps({
-#             "type": "assign_player_id",
-#             "player_id": self.player_id,
-#             "game_state": game_state
-#         }))
-#         await self.broadcast_game_state()
-
-#     async def disconnect(self, close_code):
-#         if self.player_id in game_state["players"]:
-#             del game_state["players"][self.player_id]
-#         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
-#         await self.broadcast_game_state()
-
-#     async def receive(self, text_data):
-#         data = json.loads(text_data)
-#         action = data.get('type')
-
-#         if action == "player_move" and data["player_id"] == self.player_id:
-#             await self.update_player_position(data)
-
-#     async def update_player_position(self, data):
-#         movement = data.get('movement', {})
-#         player = game_state["players"].get(self.player_id)
-#         if player and player["role"] != "goalkeeper":
-#             player["x"] = max(15, min(985, player["x"] + movement.get("x", 0)));
-#             player["y"] = max(15, min(585, player["y"] + movement.get("y", 0)));
-#         await self.broadcast_game_state()
-
-#     async def broadcast_game_state(self):
-#         await self.channel_layer.group_send(
-#             self.room_group_name,
-#             {
-#                 "type": "game_state_update",
-#                 "game_state": game_state
-#             }
-#         )
-
-#     async def game_state_update(self, event):
-#         await self.send(text_data=json.dumps({
-#             "type": "game_state_update",
-#             "game_state": event["game_state"]
-#         }))
-
 
 
 import json
@@ -910,3 +494,181 @@ class FootballGameConsumer(AsyncWebsocketConsumer):
             'type': 'state_update',
             'game_state': event['game_state']
         }))
+        
+
+
+import json
+import random
+from datetime import datetime
+from channels.generic.websocket import AsyncWebsocketConsumer
+from .models import GameRoom, PlayerStatus
+from channels.db import database_sync_to_async
+
+class LudoGameConsumer(AsyncWebsocketConsumer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.room_group_name = None
+        self.game_id = None
+        self.game_state = {
+            "players": {},
+            "current_turn": None,
+            "dice": None,
+            "status": "waiting",
+        }
+        self.colors = ["red", "blue", "green", "yellow"]
+
+    async def connect(self):
+        self.game_id = self.scope['url_route']['kwargs']['game_id']
+        self.room_group_name = f"ludo_{self.game_id}"
+        self.user = self.scope["user"]
+
+        await self.channel_layer.group_add(self.room_group_name, self.channel_name)
+        await self.accept()
+
+        await self.initialize_player()
+        await self.send_game_state()
+        await self.check_game_start()
+
+    async def disconnect(self, close_code):
+        if self.user.username in self.game_state["players"]:
+            del self.game_state["players"][self.user.username]
+        await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+        await self.broadcast_game_state()
+
+    async def receive(self, text_data):
+        data = json.loads(text_data)
+        action = data.get("type")
+
+        if action == "roll_dice":
+            await self.handle_dice_roll()
+        elif action == "move_piece":
+            await self.handle_piece_move(data["piece"], data["new_position"])
+        elif action == "chat_message":
+            await self.handle_chat_message(data["message"])
+        elif action == "player_ready":
+            await self.handle_player_ready()
+
+    # Game Logic Handlers
+    async def initialize_player(self):
+        room = await self.get_game_room()
+        player_status = await self.get_or_create_player_status(room)
+        
+        if self.user.username not in self.game_state["players"]:
+            color = await self.assign_color(room)
+            self.game_state["players"][self.user.username] = {
+                "color": color,
+                "pieces": {"piece1": 0, "piece2": 0, "piece3": 0, "piece4": 0},
+            }
+            if not self.game_state["current_turn"]:
+                self.game_state["current_turn"] = self.user.username
+
+    async def handle_dice_roll(self):
+        if self.game_state["current_turn"] == self.user.username:
+            dice = random.randint(1, 6)
+            self.game_state["dice"] = dice
+            await self.broadcast_game_state()
+
+    async def handle_piece_move(self, piece, new_position):
+        if self.game_state["current_turn"] == self.user.username:
+            player = self.game_state["players"][self.user.username]
+            if piece in player["pieces"]:
+                player["pieces"][piece] = new_position
+                self.game_state["dice"] = None  # Reset dice after move
+                await self.switch_turn()
+                await self.broadcast_game_state()
+
+    async def handle_chat_message(self, message):
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                "type": "chat_message",
+                "username": self.user.username,
+                "message": message,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+
+    async def handle_player_ready(self):
+        player_status = await self.get_or_create_player_status(await self.get_game_room())
+        await self.set_player_ready(player_status)
+        await self.check_game_start()
+
+    async def switch_turn(self):
+        players = list(self.game_state["players"].keys())
+        if not players:
+            return
+        current_idx = players.index(self.game_state["current_turn"])
+        next_idx = (current_idx + 1) % len(players)
+        self.game_state["current_turn"] = players[next_idx]
+
+    async def check_game_start(self):
+        room = await self.get_game_room()
+        if await self.get_player_count(room) >= 2 and await self.all_players_ready(room):  # Adjusted to >= 2 for testing
+            self.game_state["status"] = "playing"
+            await self.broadcast_game_state()
+
+    # Database Operations (unchanged)
+    @database_sync_to_async
+    def get_game_room(self):
+        return GameRoom.objects.get(room_code=self.game_id)
+
+    @database_sync_to_async
+    def get_or_create_player_status(self, room):
+        status, created = PlayerStatus.objects.get_or_create(
+            user=self.user, game_room=room,
+            defaults={"current_position": {"piece1": 0, "piece2": 0, "piece3": 0, "piece4": 0}}
+        )
+        return status
+
+    @database_sync_to_async
+    def set_player_ready(self, player_status):
+        player_status.is_ready = True
+        player_status.save()
+
+    @database_sync_to_async
+    def get_player_count(self, room):
+        return room.players.count()
+
+    @database_sync_to_async
+    def all_players_ready(self, room):
+        return all(status.is_ready for status in PlayerStatus.objects.filter(game_room=room))
+
+    @database_sync_to_async
+    def assign_color(self, room):
+        used_colors = [status.color for status in PlayerStatus.objects.filter(game_room=room)]
+        available_colors = [c for c in self.colors if c not in used_colors]
+        color = available_colors[0] if available_colors else "red"
+        status = PlayerStatus.objects.get(user=self.user, game_room=room)
+        status.color = color
+        status.save()
+        return color
+
+    # Broadcasting
+    async def send_game_state(self):
+        await self.send(text_data=json.dumps({
+            "type": "game_state",
+            "game_state": self.game_state,
+            "username": self.user.username,
+        }))
+
+    async def broadcast_game_state(self):
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {"type": "game_state_update", "game_state": self.game_state}
+        )
+
+    # WebSocket Event Handlers
+    async def game_state_update(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "game_state",
+            "game_state": event["game_state"],
+            "username": self.user.username,
+        }))
+
+    async def chat_message(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "chat_message",
+            "username": event["username"],
+            "message": event["message"],
+            "timestamp": event["timestamp"],
+        }))        
