@@ -55,8 +55,8 @@
 
     .room-code-highlight {
         display: inline-block;
-        background-color: #0d47a1; /* Dark blue */
-        color: #bbdefb; /* Light complementary blue */
+        background-color: #0d47a1;
+        color: #bbdefb;
         font-weight: bold;
         padding: 6px 14px;
         border-radius: 8px;
@@ -84,7 +84,7 @@
         padding: 12px 30px;
         border: none;
         border-radius: 6px;
-        background-color: #1565c0; /* Muted blue for primary CTA */
+        background-color: #1565c0;
         color: #e3f2fd;
         font-size: 16px;
         font-weight: bold;
@@ -94,10 +94,9 @@
     }
 
     .lobby-content button[type="submit"]:hover {
-        background-color: #0d47a1; /* Slightly darker on hover */
+        background-color: #0d47a1;
     }
 </style>
-
 
 <!-- Vanta Canvas -->
 <div id="vanta-canvas-full"></div>
@@ -109,9 +108,11 @@
         <div class="room-code-highlight">Room Code {{ game_code }}</div>
 
         <h4>Players in this Room:</h4>
-        {% for player in players %}
-            <div class="player-entry">{{ player.username }}</div>
-        {% endfor %}
+        <div id="player-list">
+            {% for player in players %}
+                <div class="player-entry">{{ player.username }}</div>
+            {% endfor %}
+        </div>
 
         <form method="POST">
             {% csrf_token %}
@@ -150,28 +151,27 @@
             vantaEffect.resize();
         });
     });
-    //changes
+
     const roomCode = "{{ game_room.room_code }}";
 
-    function fetchPlayers() {
+    function updatePlayerList() {
         fetch(`/get_players/${roomCode}/`)
             .then(response => response.json())
             .then(data => {
-                const container = document.querySelector(".lobby-content");
-                const playerEntries = container.querySelectorAll(".player-entry");
-                playerEntries.forEach(el => el.remove()); // Remove old ones
+                const playerListElement = document.getElementById("player-list");
+                playerListElement.innerHTML = "";  // Clear current list
 
-                const insertAfter = container.querySelector("h4");
-                data.players.forEach(username => {
+                data.players.forEach(player => {
                     const div = document.createElement("div");
                     div.className = "player-entry";
-                    div.textContent = username;
-                    insertAfter.insertAdjacentElement('afterend', div);
+                    div.textContent = player;
+                    playerListElement.appendChild(div);
                 });
             })
-            .catch(error => console.error("Error fetching players:", error));
+            .catch(err => console.error("Error fetching players:", err));
     }
 
-    setInterval(fetchPlayers, 3000); // Every 3 seconds
+    setInterval(updatePlayerList, 3000);
+    updatePlayerList();
 </script>
 {% endblock %}
