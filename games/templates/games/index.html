@@ -1,122 +1,285 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    {% load static %}
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Game Platform</title>
+
     <link rel="stylesheet" href="{% static 'css/games/home.css' %}">
     <link rel="stylesheet" href="{% static 'css/games/index.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+    <meta name="description" content="A platform for online multiplayer games, including Snake, Agar.io, Chess, and more. Join now!">
+    <meta name="keywords" content="games, multiplayer, online, Snake, Agar.io, Chess">
+
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
+            font-family: 'Poppins', sans-serif;
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            margin: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: black;
-            color: white;
+            background: #0f172a; /* deep dark blue */
+            color: #e2e8f0;
         }
 
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
         .main-header {
-            background-color: #2c3e50;
-            padding: 0.6rem 1rem;
+            background-color: #111827;
+            color: #60a5fa;
+            padding: 1rem 0;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+            border-bottom: 1px solid #1e40af;
+        }
+
+        .header-content {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-weight: bold;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
-            z-index: 1000;
         }
 
-        .main-header h1 {
-            margin: 0;
-            font-size: 1.3rem;
-            color: white;
-        }
-
-        .nav-buttons {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-        }
-
-        .nav-buttons a {
-            color: white;
+        .logo {
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: #60a5fa;
             text-decoration: none;
-            transition: color 0.3s ease;
         }
 
-        .nav-buttons a:hover {
-            color: #3498db;
+        .desktop-nav ul {
+            display: flex;
+            list-style: none;
+            gap: 30px;
         }
 
-        .logout-button {
-            background-color: #3498db;
+        .desktop-nav a {
+            color: #e0f2fe;
+            text-decoration: none;
+            font-size: 1rem;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .desktop-nav a:hover {
+            background: #1e40af;
+            color: #fff;
+        }
+
+        .btn-danger {
+            background-color: #3b82f6;
             color: white;
-            padding: 0.4rem 0.8rem;
             border: none;
-            border-radius: 4px;
+            padding: 6px 12px;
+            border-radius: 6px;
             cursor: pointer;
-            font-weight: bold;
-            transition: background-color 0.3s ease;
+            transition: background 0.3s ease;
         }
 
-        .logout-button:hover {
-            background-color: #2980b9;
+        .btn-danger:hover {
+            background-color: #2563eb;
         }
 
-        .main-footer {
-            background-color: #2c3e50 !important;
+        /* Sidebar */
+        .sidebar {
+            height: 100%;
+            width: 0;
+            position: fixed;
+            z-index: 1001;
+            top: 0;
+            left: 0;
+            background: #1e293b;
+            overflow-x: hidden;
+            transition: width 0.4s ease-in-out;
+            padding-top: 70px;
+            box-shadow: 4px 0 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .sidebar a {
+            padding: 15px 25px;
+            text-decoration: none;
+            font-size: 1.2rem;
+            color: #e2e8f0;
+            display: block;
+            transition: background 0.3s ease;
+        }
+
+        .sidebar a:hover {
+            background: #1e40af;
+        }
+
+        .menu-btn {
+            display: none;
+            font-size: 28px;
+            cursor: pointer;
+            background: none;
+            border: none;
             color: white;
+            padding: 5px 10px;
+            transition: transform 0.3s ease;
+        }
+
+        .menu-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .content-container {
+            margin-top: 90px;
+            flex: 1;
+            padding: 20px 0;
+        }
+
+        /* Footer */
+        .main-footer {
+            background-color: #111827;
+            color: #94a3b8;
             text-align: center;
-            padding: 1rem 0 0.5rem;
-            margin-top: auto;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.4);
-            z-index: 1000;
+            padding: 1.5rem 0;
+            font-size: 0.9rem;
+            border-top: 1px solid #1e40af;
+            z-index: 1001;
         }
 
         .main-footer a {
-            color: white;
+            color: #60a5fa;
             text-decoration: none;
-            margin: 0 1rem;
+            margin: 0 10px;
+            transition: color 0.3s ease;
         }
 
         .main-footer a:hover {
-            text-decoration: underline;
+            color: #93c5fd;
         }
 
-        .content {
-            flex: 1;
+        .main-footer .social-links {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .main-footer .social-icon img {
+            width: 24px;
+            height: 24px;
+            transition: transform 0.3s ease;
+        }
+
+        .main-footer .social-icon:hover img {
+            transform: scale(1.2);
+        }
+
+        @media (max-width: 768px) {
+            .desktop-nav {
+                display: none;
+            }
+
+            .menu-btn {
+                display: block;
+            }
+
+            .content-container {
+                margin-top: 70px;
+            }
+
+            .logo {
+                font-size: 1.5rem;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .sidebar {
+                display: none;
+            }
         }
     </style>
 </head>
+
 <body>
-    <!-- Header -->
     <header class="main-header">
-        <h1>GAME PLATFORM</h1>
-        <div class="nav-buttons">
-            <a href="{% url 'index' %}">Home</a>
-            <form method="post" action="{% url 'logout' %}" style="margin: 0;">
-                {% csrf_token %}
-                <button type="submit" class="logout-button">Logout</button>
-            </form>
+        <div class="container">
+            <div class="header-content">
+                <h1><a href="{% url 'home' %}" class="logo">Game Platform</a></h1>
+                <button class="menu-btn" onclick="toggleNav()">☰</button>
+                <nav class="desktop-nav">
+                    <ul>
+                        <li><a href="{% url 'home' %}" class="nav-link">Home</a></li>
+                        {% if not user.is_authenticated %}
+                        <li><a href="{% url 'signup' %}" class="nav-link">Signup</a></li>
+                        <li><a href="{% url 'login' %}" class="nav-link">Login</a></li>
+                        {% else %}
+                        <form id="logout-form" action="{% url 'logout' %}" method="post" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger" onclick="redirectToHome()">Logout</button>
+                        </form>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
         </div>
     </header>
 
-    <!-- Main Content -->
-    <div class="content">
-        {% block content %}
-        {% endblock %}
+    <div id="sidebar" class="sidebar">
+        <a href="{% url 'home' %}">Home</a>
+        {% if not user.is_authenticated %}
+        <a href="{% url 'signup' %}">Signup</a>
+        <a href="{% url 'login' %}">Login</a>
+        {% else %}
+        <form id="logout-form" action="{% url 'logout' %}" method="post" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger" onclick="redirectToHome()">Logout</button>
+        </form>
+        {% endif %}
     </div>
 
-    <!-- Footer -->
+    <main class="content-container">
+        <div class="container">
+            {% block content %}
+            <!-- Dynamic content will be injected here -->
+            {% endblock %}
+        </div>
+    </main>
+
     <footer class="main-footer">
-        <p>&copy; Game Platform All Rights Reserved</p>
-        <div>
-            <a href="#">Privacy Policy</a>
-            <a href="#">Terms of Service</a>
-            <a href="#">Contact Us</a>
+        <div class="container">
+            <p>© {{ year }} <a href="{% url 'home' %}" class="footer-logo">Game Platform</a>. All Rights Reserved.</p>
+            <ul class="social-links">
+                <li><a href="#" target="_blank" class="social-icon"><img src="{% static 'images/facebook-icon.svg' %}" alt="Facebook"></a></li>
+                <li><a href="#" target="_blank" class="social-icon"><img src="{% static 'images/twitter-icon.svg' %}" alt="Twitter"></a></li>
+                <li><a href="#" target="_blank" class="social-icon"><img src="{% static 'images/instagram-icon.svg' %}" alt="Instagram"></a></li>
+            </ul>
         </div>
     </footer>
+
+    <script>
+        function toggleNav() {
+            const sidebar = document.getElementById("sidebar");
+            sidebar.style.width = sidebar.style.width === "280px" ? "0" : "280px";
+        }
+
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById("sidebar");
+            const menuBtn = document.querySelector('.menu-btn');
+            if (window.innerWidth <= 768 && !sidebar.contains(event.target) && !menuBtn.contains(event.target)) {
+                sidebar.style.width = "0";
+            }
+        });
+    </script>
+
+    {% block extra_js %}
+    {% endblock %}
 </body>
 </html>
