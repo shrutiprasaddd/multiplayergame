@@ -14,7 +14,8 @@ urlpatterns = [
     path('chess/<str:room_code>', views.chess, name='chess'),
     # path('agar/', views.agar, name='agar'),
     path('snake/<str:room_code>', views.snake, name='snake'),
+    path('get_players/<str:room_code>/', views.get_players, name='get_players')
 ]
 
 
-path('get_players/<str:room_code>/', views.get_players, name='get_players'),
+
