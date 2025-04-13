@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ludo Game</title>
+    <style>
+        #game-container {
+            display: flex;
+            justify-content: space-between;
+            max-width: 1200px;
+            margin: 20px auto;
+        }
+        #board {
+            width: 600px;
+            height: 600px;
+            background-color: #f0f0f0;
+            position: relative;
+            border: 2px solid #333;
+        }
+        .piece {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            position: absolute;
+            cursor: pointer;
+        }
+        #controls {
+            width: 300px;
+            padding: 20px;
+        }
+        #chat-box {
+            height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-top: 20px;
+        }
+        #status {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="board">
+            <!-- Pieces will be dynamically added here -->
+        </div>
+        <div id="controls">
+            <div id="status">Waiting for players...</div>
+            <div id="player-info"></div>
+            <button id="roll-dice" disabled>Roll Dice</button>
+            <div id="dice-result"></div>
+            <div id="chat-box"></div>
+            <input type="text" id="chat-input" placeholder="Type a message...">
+            <button id="send-chat">Send</button>
+            <button id="ready-btn">I'm Ready</button>
+        </div>
+    </div>
+
+    <script>
+        const roomCode = "{{ game_room.room_code|escapejs }}";
+        const username = "{{ request.user.username }}";
+        const socket = new WebSocket(`ws://${window.location.host}/ws/ludo/${roomCode}/`);
+
+        let gameState = {};
+        const boardSize = 600;
+        const pieceSize = 20;
+
+        socket.onopen = function(e) {
+            console.log("WebSocket connection established");
+        };
+
+        socket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            console.log("Received:", data); // Debug log
+            if (data.type === "game_state") {
+                gameState = data.game_state;
+                updateUI();
+            } else if (data.type === "chat_message") {
+                addChatMessage(data.username, data.message, data.timestamp);
+            }
+        };
+
+        socket.onclose = function(e) {
+            console.error("WebSocket closed unexpectedly");
+        };
+
+        // UI Updates
+        function updateUI() {
+            document.getElementById("status").textContent = `Status: ${gameState.status}`;
+            const playerInfo = document.getElementById("player-info");
+            playerInfo.innerHTML = "";
+            for (let player in gameState.players) {
+                const p = gameState.players[player];
+                const turn = gameState.current_turn === player ? " (Your Turn)" : "";
+                playerInfo.innerHTML += `<p style="color: ${p.color}">${player}${turn}</p>`;
+                updatePieces(player, p.pieces, p.color);
+            }
+            document.getElementById("dice-result").textContent = gameState.dice ? `Dice: ${gameState.dice}` : "";
+            document.getElementById("roll-dice").disabled = gameState.current_turn !== username || gameState.status !== "playing";
+        }
+
+        function updatePieces(player, pieces, color) {
+            const board = document.getElementById("board");
+            for (let piece in pieces) {
+                const pos = pieces[piece];
+                let pieceEl = document.getElementById(`${player}-${piece}`);
+                if (!pieceEl) {
+                    pieceEl = document.createElement("div");
+                    pieceEl.id = `${player}-${piece}`;
+                    pieceEl.className = "piece";
+                    pieceEl.style.backgroundColor = color;
+                    board.appendChild(pieceEl);
+                    pieceEl.onclick = () => movePiece(piece, pos);
+                }
+                pieceEl.style.left = `${(pos % 15) * (boardSize / 15)}px`;
+                pieceEl.style.top = `${Math.floor(pos / 15) * (boardSize / 15)}px`;
+            }
+        }
+
+        // Game Actions
+        document.getElementById("roll-dice").onclick = function() {
+            socket.send(JSON.stringify({ type: "roll_dice" }));
+        };
+
+        function movePiece(piece, currentPos) {
+            if (gameState.current_turn === username && gameState.dice) {
+                const newPos = currentPos + gameState.dice;
+                socket.send(JSON.stringify({
+                    type: "move_piece",
+                    piece: piece,
+                    new_position: newPos
+                }));
+            }
+        }
+
+        document.getElementById("send-chat").onclick = function() {
+            const input = document.getElementById("chat-input");
+            if (input.value) {
+                socket.send(JSON.stringify({
+                    type: "chat_message",
+                    message: input.value
+                }));
+                input.value = "";
+            }
+        };
+
+        document.getElementById("ready-btn").onclick = function() {
+            socket.send(JSON.stringify({ type: "player_ready" }));
+            this.disabled = true;
+        };
+
+        function addChatMessage(username, message, timestamp) {
+            const chatBox = document.getElementById("chat-box");
+            chatBox.innerHTML += `<p><strong>${username}</strong> (${timestamp}): ${message}</p>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    </script>
+</body>
+</html>

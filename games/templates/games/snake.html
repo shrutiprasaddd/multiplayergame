@@ -1,307 +1,475 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enhanced Multiplayer Snake Game</title>
+  <head>
+    <meta charset="UTF-8" />
+    <title>3D Snake Game</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #000;
-            font-family: Arial, sans-serif;
-            cursor: none;
-        }
-        canvas {
-            display: block;
-            position: absolute;
-            background: transparent;
-        }
-        #scoreboard {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #fff;
-            font-size: 24px;
-            text-shadow: 0 0 10px rgba(255,255,255,0.5);
-            z-index: 10;
-            background: rgba(0,0,0,0.7);
-            padding: 10px 20px;
-            border-radius: 20px;
-        }
-        #cursor {
-            position: fixed;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(255,255,255,0.8), rgba(255,255,255,0));
-            pointer-events: none;
-            z-index: 9999;
-            transition: transform 0.1s ease;
-        }
+      body {
+        margin: 0;
+        background-color: #000;
+        font-family: "Arial", sans-serif;
+        height: 100vh;
+        overflow: hidden;
+        position: relative;
+      }
+      #scoreboard {
+        color: white;
+        font-size: 24px;
+        background: rgba(0, 0, 0, 0.9);
+        padding: 12px 25px;
+        border-radius: 12px;
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        box-shadow: 0 0 15px #00ffcc;
+        backdrop-filter: blur(3px);
+      }
+      #boost-meter {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 200px;
+        height: 10px;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 5px;
+        overflow: hidden;
+      }
+      #boost-bar {
+        height: 100%;
+        width: 100%;
+        background: linear-gradient(90deg, #00ffcc, #00ff88);
+        transition: width 0.3s ease;
+      }
+      canvas {
+        border: 2px solid #fff;
+        background-color: #02042b;
+        box-shadow: 0 0 20px #00ffcc;
+        border-radius: 10px;
+        transition: transform 0.3s ease;
+      }
     </style>
-</head>
-<body>
-    <div id="cursor"></div>
+  </head>
+  <body>
     <div id="scoreboard">Score: <span id="score">0</span></div>
+    <div id="boost-meter"><div id="boost-bar"></div></div>
     <canvas id="gameCanvas"></canvas>
 
     <script>
-        // Custom cursor
-        const cursor = document.getElementById('cursor');
-        document.addEventListener('mousemove', (e) => {
-            cursor.style.left = e.clientX - 10 + 'px';
-            cursor.style.top = e.clientY - 10 + 'px';
-            cursor.style.transform = 'scale(1.5)';
-            setTimeout(() => cursor.style.transform = 'scale(1)', 100);
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      let lastMoveTime = 0;
+      const moveInterval = 40;
+
+      const SQUARE_SIZE = 20;
+      const SEGMENT_RADIUS = 12;
+      const EYE_SIZE = 6;
+      let tongueAnimation = 0;
+
+      let snake = [{ x: 100, y: 100 }];
+      let direction = "RIGHT";
+      let velocity = { x: SQUARE_SIZE, y: 0 };
+      let foods = [];
+      let score = 0;
+      let cameraX = 0,
+          cameraY = 0;
+      let stars = [];
+      let boosting = false;
+      const boostMultiplier = 1.8;
+      let otherSnakes = {};
+      let socket = null;
+
+      // WebSocket connection with reconnection
+      const roomCode = "{{ game_room.room_code|escapejs }}"; // Replace with dynamic room code
+      let reconnectAttempts = 0;
+      const maxReconnectAttempts = 5;
+
+      function connectWebSocket() {
+        socket = new WebSocket(`ws://${window.location.host}/ws/snake-game/${roomCode}/`);
+
+        socket.onopen = () => {
+          console.log("WebSocket connected");
+          reconnectAttempts = 0;
+          socket.channel_name = `player_${Math.random().toString(36).substr(2, 9)}`;
+          socket.send(JSON.stringify({ type: "request_initial_state" }));
+        };
+
+        socket.onmessage = (e) => {
+          try {
+            const data = JSON.parse(e.data);
+            if (data.type === "snake_game_update") {
+              otherSnakes = {};
+              for (let channel in data.snake_data) {
+                if (channel !== socket.channel_name) {
+                  otherSnakes[channel] = data.snake_data[channel].snake;
+                }
+              }
+              foods = Object.values(data.food_data);
+              if (data.snake_data[socket.channel_name]) {
+                score = data.snake_data[socket.channel_name].score;
+                snake = data.snake_data[socket.channel_name].snake;
+                document.getElementById("score").innerText = score;
+              }
+            }
+          } catch (error) {
+            console.error("WebSocket message error:", error);
+          }
+        };
+
+        socket.onclose = () => {
+          console.warn("WebSocket closed");
+          if (reconnectAttempts < maxReconnectAttempts) {
+            setTimeout(() => {
+              console.log(`Reconnecting... Attempt ${reconnectAttempts + 1}`);
+              reconnectAttempts++;
+              connectWebSocket();
+            }, 1000 * reconnectAttempts);
+          } else {
+            console.error("Max reconnect attempts reached.");
+          }
+        };
+
+        socket.onerror = (error) => {
+          console.error("WebSocket error:", error);
+        };
+      }
+
+      connectWebSocket();
+
+      // Request food periodically to ensure food is available
+      setInterval(() => {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ 
+            type: "request_food",
+            snake_head: snake[0] // Send snake's head position
+          }));
+        }
+      }, 2000); // Reduced interval for more frequent checks
+
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "Shift" || e.key === " ") boosting = true;
+        if (e.key === "ArrowUp" && velocity.y === 0) {
+          velocity = { x: 0, y: -SQUARE_SIZE };
+          direction = "UP";
+        }
+        if (e.key === "ArrowDown" && velocity.y === 0) {
+          velocity = { x: 0, y: SQUARE_SIZE };
+          direction = "DOWN";
+        }
+        if (e.key === "ArrowLeft" && velocity.x === 0) {
+          velocity = { x: -SQUARE_SIZE, y: 0 };
+          direction = "LEFT";
+        }
+        if (e.key === "ArrowRight" && velocity.x === 0) {
+          velocity = { x: SQUARE_SIZE, y: 0 };
+          direction = "RIGHT";
+        }
+      });
+
+      window.addEventListener("keyup", (e) => {
+        if (e.key === "Shift" || e.key === " ") boosting = false;
+      });
+
+      function initStars() {
+        stars = [];
+        for (let i = 0; i < 200; i++) {
+          stars.push({
+            x: Math.random() * canvas.width * 2 - canvas.width,
+            y: Math.random() * canvas.height * 2 - canvas.height,
+            size: Math.random() * 3 + 1,
+            speed: Math.random() * 0.5 + 0.1,
+          });
+        }
+      }
+      initStars();
+
+      function normalizeFood(food) {
+        return {
+          x: food.x || 0,
+          y: food.y || 0,
+          pulse: food.pulse || 1,
+          grow: food.grow !== undefined ? food.grow : true,
+          color: food.color || "red",
+          points: food.points || 10,
+          baseSize: food.baseSize || 8,
+        };
+      }
+
+      function drawSnake(snakeArray, isLocal = false, dir = direction) {
+        const timestamp = Date.now();
+        tongueAnimation = Math.sin(timestamp * 0.01) * 5;
+
+        snakeArray.forEach((segment, index) => {
+          const gradient = ctx.createRadialGradient(
+            segment.x - cameraX + SQUARE_SIZE / 2,
+            segment.y - cameraY + SQUARE_SIZE / 2,
+            0,
+            segment.x - cameraX + SQUARE_SIZE / 2,
+            segment.y - cameraY + SQUARE_SIZE / 2,
+            SEGMENT_RADIUS
+          );
+          gradient.addColorStop(0, isLocal ? "#2d5a27" : "#5a272d");
+          gradient.addColorStop(0.7, isLocal ? "#1e3b1a" : "#3b1a1e");
+          gradient.addColorStop(1, isLocal ? "#152813" : "#281315");
+
+          ctx.shadowColor = "rgba(0,0,0,0.5)";
+          ctx.shadowBlur = 15;
+          ctx.shadowOffsetX = 5;
+          ctx.shadowOffsetY = 5;
+
+          ctx.beginPath();
+          ctx.arc(
+            segment.x - cameraX + SQUARE_SIZE / 2,
+            segment.y - cameraY + SQUARE_SIZE / 2,
+            SEGMENT_RADIUS - index * 0.1,
+            0,
+            Math.PI * 2
+          );
+          ctx.fillStyle = gradient;
+          ctx.fill();
+
+          ctx.strokeStyle = isLocal ? "#45883a" : "#883a45";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(
+            segment.x - cameraX + SQUARE_SIZE / 2,
+            segment.y - cameraY + SQUARE_SIZE / 2,
+            SEGMENT_RADIUS - index * 0.1 - 2,
+            0,
+            Math.PI * 2
+          );
+          ctx.stroke();
         });
 
-        // WebSocket setup
-        const roomCode = prompt("Enter Room Code:");
-        const ws = new WebSocket(`ws://${window.location.host}/ws/snake-game/${roomCode}/`);
+        if (snakeArray.length > 0) {
+          const head = snakeArray[0];
+          const headGradient = ctx.createRadialGradient(
+            head.x - cameraX + SQUARE_SIZE / 2,
+            head.y - cameraY + SQUARE_SIZE / 2,
+            0,
+            head.x - cameraX + SQUARE_SIZE / 2,
+            head.y - cameraY + SQUARE_SIZE / 2,
+            SEGMENT_RADIUS + 2
+          );
+          headGradient.addColorStop(0, isLocal ? "#3d8832" : "#88323d");
+          headGradient.addColorStop(1, isLocal ? "#2d5a27" : "#5a272d");
 
-        // Canvas setup
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        const SQUARE_SIZE = 20;
+          ctx.beginPath();
+          ctx.arc(
+            head.x - cameraX + SQUARE_SIZE / 2,
+            head.y - cameraY + SQUARE_SIZE / 2,
+            SEGMENT_RADIUS + 2,
+            0,
+            Math.PI * 2
+          );
+          ctx.fillStyle = headGradient;
+          ctx.fill();
+
+          const eyeDirection = {
+            x: dir === "RIGHT" ? 1 : dir === "LEFT" ? -1 : 0,
+            y: dir === "DOWN" ? 1 : dir === "UP" ? -1 : 0,
+          };
+
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(
+            head.x - cameraX + SQUARE_SIZE / 2 - 8 + eyeDirection.x * 3,
+            head.y - cameraY + SQUARE_SIZE / 2 - 8 + eyeDirection.y * 3,
+            EYE_SIZE,
+            0,
+            Math.PI * 2
+          );
+          ctx.arc(
+            head.x - cameraX + SQUARE_SIZE / 2 + 8 + eyeDirection.x * 3,
+            head.y - cameraY + SQUARE_SIZE / 2 - 8 + eyeDirection.y * 3,
+            EYE_SIZE,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+
+          ctx.fillStyle = "#000000";
+          ctx.beginPath();
+          ctx.arc(
+            head.x - cameraX + SQUARE_SIZE / 2 - 8 + eyeDirection.x * 5,
+            head.y - cameraY + SQUARE_SIZE / 2 - 8 + eyeDirection.y * 5,
+            2,
+            0,
+            Math.PI * 2
+          );
+          ctx.arc(
+            head.x - cameraX + SQUARE_SIZE / 2 + 8 + eyeDirection.x * 5,
+            head.y - cameraY + SQUARE_SIZE / 2 - 8 + eyeDirection.y * 5,
+            2,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+
+          ctx.strokeStyle = "#ff4444";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(
+            head.x - cameraX + SQUARE_SIZE / 2 + eyeDirection.x * 10,
+            head.y - cameraY + SQUARE_SIZE / 2 + eyeDirection.y * 10
+          );
+          ctx.lineTo(
+            head.x - cameraX + SQUARE_SIZE / 2 + eyeDirection.x * (20 + tongueAnimation),
+            head.y - cameraY + SQUARE_SIZE / 2 + eyeDirection.y * (20 + tongueAnimation)
+          );
+          ctx.stroke();
+        }
+
+        ctx.shadowColor = "transparent";
+      }
+
+      function drawFood() {
+        foods.forEach((food) => {
+          const normalizedFood = normalizeFood(food);
+          const drawX = normalizedFood.x - cameraX + SQUARE_SIZE / 2;
+          const drawY = normalizedFood.y - cameraY + SQUARE_SIZE / 2;
+
+          if (normalizedFood.grow) {
+            normalizedFood.pulse += 0.05;
+            if (normalizedFood.pulse >= 1.3) normalizedFood.grow = false;
+          } else {
+            normalizedFood.pulse -= 0.05;
+            if (normalizedFood.pulse <= 0.8) normalizedFood.grow = true;
+          }
+
+          const size = normalizedFood.baseSize * normalizedFood.pulse;
+
+          const gradient = ctx.createRadialGradient(drawX, drawY, 0, drawX, drawY, size);
+          gradient.addColorStop(0, normalizedFood.color);
+          gradient.addColorStop(1, "rgba(255,255,255,0)");
+
+          ctx.shadowColor = normalizedFood.color;
+          ctx.shadowBlur = 20;
+
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.arc(drawX, drawY, size, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.shadowColor = "transparent";
+        });
+      }
+
+      function drawStars() {
+        ctx.fillStyle = "#0a0a23";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        stars.forEach((star) => {
+          star.x += star.speed * (snake[0].x - cameraX) * 0.01;
+          star.y += star.speed * (snake[0].y - cameraY) * 0.01;
+
+          if (star.x - cameraX < -canvas.width) star.x += canvas.width * 2;
+          if (star.x - cameraX > canvas.width) star.x -= canvas.width * 2;
+          if (star.y - cameraY < -canvas.height) star.y += canvas.height * 2;
+          if (star.y - cameraY > canvas.height) star.y -= canvas.height * 2;
+
+          ctx.beginPath();
+          ctx.arc(
+            star.x - cameraX,
+            star.y - cameraY,
+            star.size,
+            0,
+            Math.PI * 2
+          );
+          ctx.fillStyle = `rgba(255,255,255,0.7)`;
+          ctx.fill();
+        });
+      }
+
+      function moveSnake() {
+        if (!snake[0]) return;
+        const head = {
+          x: snake[0].x + velocity.x,
+          y: snake[0].y + velocity.y,
+        };
+        snake.unshift(head);
+
+        const eatenFoods = [];
+        foods.forEach((food, index) => {
+          if (
+            Math.abs(head.x - food.x) < SQUARE_SIZE &&
+            Math.abs(head.y - food.y) < SQUARE_SIZE
+          ) {
+            eatenFoods.push({ index, points: food.points || 10 });
+          }
+        });
+
+        if (eatenFoods.length > 0) {
+          eatenFoods.forEach(({ index, points }) => {
+            foods.splice(index, 1);
+            score += points;
+          });
+          document.getElementById("score").innerText = score;
+
+          try {
+            const eatSound = new Audio("eat.mp3");
+            eatSound.play().catch(() => console.warn("Audio playback failed"));
+          } catch (e) {
+            console.warn("Audio file eat.mp3 not found");
+          }
+
+          // Notify server of eaten food
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+              type: "food_eaten",
+              eaten_indices: eatenFoods.map(f => f.index),
+              score: score
+            }));
+          }
+        } else {
+          snake.pop();
+        }
+
+        cameraX = head.x - canvas.width / 2;
+        cameraY = head.y - canvas.height / 2;
+
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({
+            type: "snake_update",
+            snake: snake,
+            score: score
+          }));
+        }
+      }
+
+      function gameLoop(timestamp) {
+        try {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          drawStars();
+          drawFood();
+          drawSnake(snake, true);
+          for (let channel in otherSnakes) {
+            drawSnake(otherSnakes[channel], false, direction);
+          }
+          if (
+            timestamp - lastMoveTime >
+            moveInterval / (boosting ? boostMultiplier : 1)
+          ) {
+            moveSnake();
+            lastMoveTime = timestamp;
+          }
+        } catch (e) {
+          console.error("Game loop error:", e);
+        }
+        requestAnimationFrame(gameLoop);
+      }
+
+      requestAnimationFrame(gameLoop);
+
+      window.addEventListener("resize", () => {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
-
-        // Game variables
-        let snake = [{ x: 0, y: 0 }]; // Starting at origin
-        let direction = "RIGHT";
-        let snakes = {};
-        let foods = [];
-        let score = 0;
-        let particles = [];
-        let cameraX = 0;
-        let cameraY = 0;
-        let stars = []; // For dynamic background
-
-        // Initialize stars for background
-        function initStars() {
-            for (let i = 0; i < 200; i++) {
-                stars.push({
-                    x: Math.random() * canvas.width * 2 - canvas.width,
-                    y: Math.random() * canvas.height * 2 - canvas.height,
-                    size: Math.random() * 3 + 1,
-                    speed: Math.random() * 0.5 + 0.1
-                });
-            }
-        }
         initStars();
-
-        // WebSocket handlers
-        ws.onopen = () => console.log("Connected to Snake Game WebSocket.");
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === "snake_game_update") {
-                snakes = data.snake_data;
-            }
-        };
-        ws.onclose = () => alert("Connection closed. Refresh to try again.");
-
-        // Keyboard controls
-        document.addEventListener("keydown", (event) => {
-            const newDirection = {
-                'ArrowUp': direction !== "DOWN" ? "UP" : direction,
-                'ArrowDown': direction !== "UP" ? "DOWN" : direction,
-                'ArrowLeft': direction !== "RIGHT" ? "LEFT" : direction,
-                'ArrowRight': direction !== "LEFT" ? "RIGHT" : direction
-            }[event.key] || direction;
-            
-            if (newDirection !== direction) {
-                addParticles(snake[0].x, snake[0].y);
-            }
-            direction = newDirection;
-        });
-
-        // Particle system
-        function addParticles(x, y) {
-            for (let i = 0; i < 10; i++) {
-                particles.push({
-                    x: x + SQUARE_SIZE/2,
-                    y: y + SQUARE_SIZE/2,
-                    vx: (Math.random() - 0.5) * 10,
-                    vy: (Math.random() - 0.5) * 10,
-                    life: 1
-                });
-            }
-        }
-
-        function updateParticles() {
-            particles = particles.filter(p => {
-                p.x += p.vx;
-                p.y += p.vy;
-                p.life -= 0.02;
-                return p.life > 0;
-            });
-        }
-
-        function drawParticles() {
-            particles.forEach(p => {
-                ctx.beginPath();
-                ctx.arc(p.x - cameraX, p.y - cameraY, 3 * p.life, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(255, 255, 0, ${p.life})`;
-                ctx.fill();
-            });
-        }
-
-        // Enhanced food system
-        function spawnFood() {
-            while (foods.length < 10) { // Ensure minimum 10 food items
-                const food = {
-                    x: snake[0].x + (Math.random() * canvas.width - canvas.width/2),
-                    y: snake[0].y + (Math.random() * canvas.height - canvas.height/2),
-                    pulseSize: 1,
-                    pulseGrowing: true
-                };
-                foods.push(food);
-            }
-        }
-
-        function drawFood() {
-            foods.forEach(food => {
-                if (food.pulseGrowing) {
-                    food.pulseSize += 0.05;
-                    if (food.pulseSize >= 1.2) food.pulseGrowing = false;
-                } else {
-                    food.pulseSize -= 0.05;
-                    if (food.pulseSize <= 0.8) food.pulseGrowing = true;
-                }
-
-                const gradient = ctx.createRadialGradient(
-                    food.x - cameraX + SQUARE_SIZE/2, food.y - cameraY + SQUARE_SIZE/2, 0,
-                    food.x - cameraX + SQUARE_SIZE/2, food.y - cameraY + SQUARE_SIZE/2, SQUARE_SIZE
-                );
-                gradient.addColorStop(0, 'red');
-                gradient.addColorStop(1, 'rgba(255,0,0,0)');
-                
-                ctx.fillStyle = gradient;
-                ctx.fillRect(
-                    food.x - cameraX - (SQUARE_SIZE * food.pulseSize - SQUARE_SIZE)/2,
-                    food.y - cameraY - (SQUARE_SIZE * food.pulseSize - SQUARE_SIZE)/2,
-                    SQUARE_SIZE * food.pulseSize,
-                    SQUARE_SIZE * food.pulseSize
-                );
-            });
-        }
-
-        function drawSnakes() {
-            Object.values(snakes).forEach((playerSnake, playerIndex) => {
-                playerSnake.forEach((segment, index) => {
-                    const gradient = ctx.createRadialGradient(
-                        segment.x - cameraX + SQUARE_SIZE/2, segment.y - cameraY + SQUARE_SIZE/2, 0,
-                        segment.x - cameraX + SQUARE_SIZE/2, segment.y - cameraY + SQUARE_SIZE/2, SQUARE_SIZE
-                    );
-                    
-                    if (index === 0) {
-                        gradient.addColorStop(0, 'blue');
-                        gradient.addColorStop(1, 'rgba(0,0,255,0.5)');
-                    } else {
-                        gradient.addColorStop(0, 'green');
-                        gradient.addColorStop(1, 'rgba(0,255,0,0.5)');
-                    }
-                    
-                    ctx.fillStyle = gradient;
-                    ctx.fillRect(segment.x - cameraX, segment.y - cameraY, SQUARE_SIZE, SQUARE_SIZE);
-                });
-            });
-        }
-
-        function moveSnake() {
-            const head = { ...snake[0] };
-            const moves = {
-                'UP': { y: -SQUARE_SIZE },
-                'DOWN': { y: SQUARE_SIZE },
-                'LEFT': { x: -SQUARE_SIZE },
-                'RIGHT': { x: SQUARE_SIZE }
-            }[direction];
-            
-            Object.entries(moves).forEach(([key, value]) => head[key] = (head[key] || 0) + value);
-            snake.unshift(head);
-
-            // Camera follows snake
-            cameraX = head.x - canvas.width / 2;
-            cameraY = head.y - canvas.height / 2;
-
-            const foodIndex = foods.findIndex(food => 
-                Math.abs(head.x - food.x) < SQUARE_SIZE && Math.abs(head.y - food.y) < SQUARE_SIZE
-            );
-
-            if (foodIndex !== -1) {
-                foods.splice(foodIndex, 1);
-                score += 10;
-                document.getElementById("score").innerText = score;
-                addParticles(head.x, head.y);
-            } else {
-                snake.pop();
-            }
-            spawnFood(); // Ensure food availability
-        }
-
-        function drawBackground() {
-            ctx.fillStyle = '#0a0a23';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Dynamic starry background
-            stars.forEach(star => {
-                star.x += star.speed * (snake[0].x - cameraX) * 0.01;
-                star.y += star.speed * (snake[0].y - cameraY) * 0.01;
-
-                // Wrap stars around
-                if (star.x - cameraX < -canvas.width) star.x += canvas.width * 2;
-                if (star.x - cameraX > canvas.width) star.x -= canvas.width * 2;
-                if (star.y - cameraY < -canvas.height) star.y += canvas.height * 2;
-                if (star.y - cameraY > canvas.height) star.y -= canvas.height * 2;
-
-                ctx.beginPath();
-                ctx.arc(star.x - cameraX, star.y - cameraY, star.size, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(255, 255, 255, ${Math.sin(Date.now() * 0.001 + star.x) * 0.5 + 0.5})`;
-                ctx.fill();
-            });
-
-            // Add subtle nebula effect
-            const nebulaGradient = ctx.createRadialGradient(
-                canvas.width/2, canvas.height/2, 0,
-                canvas.width/2, canvas.height/2, canvas.width
-            );
-            nebulaGradient.addColorStop(0, 'rgba(100, 0, 255, 0.1)');
-            nebulaGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-            ctx.fillStyle = nebulaGradient;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
-
-        function broadcastSnake() {
-            ws.send(JSON.stringify({
-                type: "snake_update",
-                snake: snake
-            }));
-        }
-
-        function gameLoop() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            drawBackground();
-            updateParticles();
-            drawParticles();
-            drawFood();
-            drawSnakes();
-            
-            moveSnake();
-            broadcastSnake();
-        }
-
-        // Resize handler
-        window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        });
-
-        // Game loop interval
-        setInterval(gameLoop, 1000 / 15); // 15 FPS
-        spawnFood();
+      });
     </script>
-</body>
+  </body>
 </html>

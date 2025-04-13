@@ -3,6 +3,11 @@ from django.http import JsonResponse
 from .models import Game, GameRoom, PlayerStatus
 from django.contrib.auth.models import User
 import uuid
+# Add these imports to your existing views.py file
+from django.http import JsonResponse
+from django.utils import timezone
+from datetime import timedelta
+import json
 
 
 
@@ -84,6 +89,48 @@ def home(request):
 
 
 
+# New view to check if game is starting
+def check_game_starting(request, room_code):
+    try:
+        game_room = GameRoom.objects.get(room_code=room_code)
+        
+        if game_room.is_starting:
+            # Calculate remaining countdown time
+            if game_room.start_time:
+                now = timezone.now()
+                if now < game_room.start_time:
+                    seconds_left = (game_room.start_time - now).total_seconds()
+                    return JsonResponse({
+                        'is_starting': True,
+                        'countdown_from': int(seconds_left)
+                    })
+            
+            return JsonResponse({'is_starting': True, 'countdown_from': 5})
+        else:
+            return JsonResponse({'is_starting': False})
+    except GameRoom.DoesNotExist:
+        return JsonResponse({'is_starting': False, 'error': 'Room not found'})
+
+# New view to start the countdown
+def start_game_countdown(request, room_code, game_id):
+    if request.method == 'POST':
+        try:
+            game_room = GameRoom.objects.get(room_code=room_code)
+            
+            # Set the game to starting status
+            game_room.is_starting = True
+            game_room.start_time = timezone.now() + timedelta(seconds=5)  # 5 second countdown
+            game_room.save()
+            
+            return JsonResponse({'status': 'countdown_started'})
+        except GameRoom.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Room not found'}, status=404)
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)
+
+
+
+
 from django.utils.timezone import now, timedelta
 
 from django.utils.timezone import now, timedelta
@@ -147,6 +194,30 @@ def game_room_views(request, game_id):
                 room.save()
 
                 return JsonResponse({'room_code': room.room_code, 'game_id': game_id})
+            
+            elif game.slug == "ludo":
+                # Find an available room with less than 4 players
+                room = GameRoom.objects.filter(game=game, is_active=True, is_private=False).annotate(
+                    player_count=Count('players')
+                ).filter(player_count__lt=4).first()
+
+                if room:
+                    room.players.add(request.user)
+                    if room.players.count() == 4:
+                        room.is_started = True  # Start game when 4 players join
+                    room.save()
+                else:
+                    # Create a new room if no available room exists
+                    room = GameRoom.objects.create(
+                        game=game,
+                        created_by=request.user,
+                        room_code=str(uuid.uuid4())[:8].upper(),
+                        is_private=False
+                    )
+                    room.players.add(request.user)
+                    room.save()
+
+                return JsonResponse({'room_code': room.room_code, 'game_id': game_id})
 
         elif action == 'create_private_room':
             # Create a private room
@@ -192,30 +263,68 @@ def game_room_views(request, game_id):
 
 
 
-from django.urls import reverse
-
 def game_lobby(request, room_code, game_id):
-    game_room = GameRoom.objects.get(room_code=room_code)
-
-    # Validate the game ID
-    if game_room.game.game_id != game_id:
-        print("Room not found")
-        return redirect('home')  # Redirect to home if game ID doesn't match
-
-    players = game_room.players.all()  # Get the players in this game room
-
-    if request.method == 'POST':
-        # Set the game room to started
-        game_room.is_started = True
-        game_room.save()
-
-        # Redirect to the appropriate game start view
-        return redirect(reverse('start_game', kwargs={'room_code': room_code, 'game_id': game_id}))
-
-    return render(request, 'games/game_lobby.html', {'game_room': game_room, 'players': players})
-
-
+    try:
+        game_room = GameRoom.objects.get(room_code=room_code)
+        
+        # Validate the game ID
+        if game_room.game.game_id != game_id:
+            print("Room not found")
+            return redirect('home')  # Redirect to home if game ID doesn't match
+        
+        players = game_room.players.all()  # Get the players in this game room
+        
+        if request.method == 'POST':
+            # Check if the request is an AJAX request
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                # Set the game room to starting
+                game_room.is_starting = True
+                game_room.start_time = timezone.now() + timedelta(seconds=5)  # 5 second countdown
+                game_room.save()
+                
+                # Return JSON response for AJAX
+                return JsonResponse({
+                    'status': 'countdown_started',
+                    'redirect': reverse('start_game', kwargs={'room_code': room_code, 'game_id': game_id})
+                })
+            else:
+                # For traditional form submission, start the countdown
+                game_room.is_starting = True
+                game_room.start_time = timezone.now() + timedelta(seconds=5)
+                game_room.save()
+                
+                # Redirect to the same page to show countdown
+                return redirect('game_lobby', room_code=room_code, game_id=game_id)
+        
+        # Check if countdown is already in progress
+        countdown_in_progress = False
+        seconds_left = 0
+        
+        if game_room.is_starting and game_room.start_time:
+            now = timezone.now()
+            if now < game_room.start_time:
+                countdown_in_progress = True
+                seconds_left = int((game_room.start_time - now).total_seconds())
+            elif now >= game_room.start_time:
+                # Countdown has finished, redirect to game
+                return redirect('start_game', room_code=room_code, game_id=game_id)
+        
+        return render(request, 'games/game_lobby.html', {
+            'game_room': game_room,
+            'players': players,
+            'countdown_in_progress': countdown_in_progress,
+            'seconds_left': seconds_left
+        })
+        
+    except GameRoom.DoesNotExist:
+        return HttpResponseNotFound("Game room not found.")
+    
+    
+# games/views.py
 from django.http import HttpResponseNotFound
+from django.shortcuts import render, redirect
+from django.urls import reverse
+from .models import Game, GameRoom, PlayerStatus
 
 def start_game(request, room_code, game_id):
     try:
@@ -223,9 +332,7 @@ def start_game(request, room_code, game_id):
         game = Game.objects.get(game_id=game_id)
         
         if game_room.game.game_id != game_id:
-            # Redirect to lobby if the game ID doesn't match
             return redirect('game_lobby', room_code=room_code, game_id=game_id)
-        
         if game.slug == "chess":
             return render(request, 'games/chess.html', {'game_room': game_room})
         elif game.slug == "Agar.io":
@@ -242,16 +349,33 @@ def start_game(request, room_code, game_id):
                     'score': player_status.score if player_status else 0,  # Default score to 0 if no status found
                 })
             return render(request, 'games/snake.html', {'game_room': game_room, 'players_with_scores': players_with_scores})
+        
+        elif game.slug == "ludo":
+            players_with_positions = []
+            for player in game_room.players.all():
+                player_status, created = PlayerStatus.objects.get_or_create(
+                    user=player,
+                    game_room=game_room,
+                    defaults={
+                        'score': 0,
+                        'current_position': {"piece1": 0, "piece2": 0, "piece3": 0, "piece4": 0}
+                    }
+                )
+                players_with_positions.append({
+                    'username': player.username,
+                    'positions': player_status.current_position,
+                })
+            return render(request, 'games/ludo.html', {
+                'game_room': game_room,
+                'players_with_positions': players_with_positions
+            })
+        # Add other game cases (chess, snake, etc.) as needed
         else:
-            # Handle the case where the game slug doesn't match any known games
             return HttpResponseNotFound("Game not found.")
     except GameRoom.DoesNotExist:
-        # Handle the case where the room does not exist
         return HttpResponseNotFound("Game room not found.")
     except Game.DoesNotExist:
-        # Handle the case where the game does not exist
         return HttpResponseNotFound("Game not found.")
-
 
 from django.shortcuts import render
 from .models import GameRoom
@@ -284,11 +408,31 @@ def snake(request, room_code):
 def football(request,room_code):
     pass
 
+<<<<<<< HEAD
 
+=======
+# games/views.py
+def ludo(request, room_code):
+    try:
+        game_room = GameRoom.objects.get(room_code=room_code)
+        if not game_room.is_active or game_room.game.slug != "ludo":
+            return redirect('game_lobby', room_code=room_code, game_id=game_room.game.game_id)
+        return render(request, 'games/ludo.html', {'game_room': game_room})
+    except GameRoom.DoesNotExist:
+        return HttpResponseNotFound("Game room not found.")
+
+
+from django.http import JsonResponse
+from .models import GameRoom
+>>>>>>> 3139c241f10c3e9062b3f79bb2e1d916f9630e1f
 def get_players(request, room_code):
     try:
         game_room = GameRoom.objects.get(room_code=room_code)
         players = game_room.players.all()
         return JsonResponse({'players': [p.username for p in players]})
     except GameRoom.DoesNotExist:
+<<<<<<< HEAD
         return JsonResponse({'players': []})
+=======
+        return JsonResponse({'players': []})
+>>>>>>> 3139c241f10c3e9062b3f79bb2e1d916f9630e1f

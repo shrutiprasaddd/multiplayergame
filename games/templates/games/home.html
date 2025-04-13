@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Lobby - Play & Compete</title>
+    <title>Multigame Platform - Play & Compete</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
@@ -72,7 +72,7 @@
     <!-- Header/Navbar -->
     <nav class="navbar navbar-expand-lg">
         <div class="container">
-            <a class="navbar-brand" href="#">Game Lobby</a>
+            <a class="navbar-brand" href="#">Multigame Platform - Play & Compet</a>
             <div class="d-flex">
     {% if user.is_authenticated %}
         <span class="navbar-text me-3">Welcome, {{ user.username }}</span>
@@ -128,7 +128,7 @@
                         <div class="card-body text-center">
                             <h5 class="card-title">{{ game.name }}</h5>
                             <p class="card-text">Active Rooms: {{ game.rooms }}</p>
-                            {% if game.slug in 'snake,football,chess' %}
+                            {% if game.slug in 'snake,football,chess,ludo' %}
                                 <a href="{% url 'game_room_views' game.game_id %}" class="btn btn-primary">Play Now</a>
                             {% elif game.playcanvas_project_id %}
                                 <a href="https://playcanv.as/p/{{ game.playcanvas_project_id }}" class="btn btn-success">Play Now</a>
