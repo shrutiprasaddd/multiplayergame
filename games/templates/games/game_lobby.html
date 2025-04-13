@@ -95,16 +95,54 @@
     .lobby-content button[type="submit"]:hover {
         background-color: #0d47a1;
     }
+    
+    /* Countdown styling */
+    #countdown-container {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.8);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    #countdown {
+        font-size: 120px;
+        color: #fff;
+        font-weight: bold;
+        text-shadow: 0 0 20px rgba(0, 183, 255, 0.7);
+        animation: pulse 1s infinite alternate;
+    }
+    
+    @keyframes pulse {
+        from {
+            transform: scale(1);
+            opacity: 1;
+        }
+        to {
+            transform: scale(1.1);
+            opacity: 0.8;
+        }
+    }
 </style>
 
 <!-- Vanta Canvas -->
 <div id="vanta-canvas-full"></div>
 
+<!-- Countdown Overlay -->
+<div id="countdown-container">
+    <div id="countdown">5</div>
+</div>
+
 <!-- Lobby Content -->
 <div class="overlay-container">
     <div class="lobby-content">
-        <h3>Room: {{ game_room.room_code }} - {{ game_room.game.name }}</h3>
-        <div class="room-code-highlight">Room Code {{ game_code }}</div>
+        <h3>Room: {{ game_room.game.name }}</h3>
+        <div class="room-code-highlight">Room Code: {{ game_room.room_code }}</div>
 
         <h4>Players in this Room:</h4>
         <!-- Placeholder: dynamic content will fill this -->
@@ -114,9 +152,9 @@
             {% endfor %}
         </div>
 
-        <form method="POST">
+        <form id="start-game-form" method="POST">
             {% csrf_token %}
-            <button type="submit">START GAME</button>
+            <button type="submit" id="start-button">START GAME</button>
         </form>
     </div>
 </div>
@@ -149,30 +187,96 @@
         });
 
         window.addEventListener('resize', () => vantaEffect.resize());
-    });
+        
+        // Variables
+        const roomCode = "{{ game_room.room_code }}";
+        const gameId = "{{ game_room.game.game_id }}";
+        const startForm = document.getElementById("start-game-form");
+        const countdownContainer = document.getElementById("countdown-container");
+        const countdownElement = document.getElementById("countdown");
+        let gameStartPollingInterval;
+        
+        // AJAX Player List Refresh
+        function updatePlayerList() {
+            fetch(`/get_players/${roomCode}/`)
+                .then(response => response.json())
+                .then(data => {
+                    const playerListElement = document.getElementById("player-list");
+                    playerListElement.innerHTML = ""; // Clear old list
 
-    // AJAX Player List Refresh
-    const roomCode = "{{ game_room.room_code }}";
-
-    function updatePlayerList() {
-        fetch(`/get_players/${roomCode}/`)
+                    data.players.forEach(player => {
+                        const div = document.createElement("div");
+                        div.className = "player-entry";
+                        div.textContent = player;
+                        playerListElement.appendChild(div);
+                    });
+                    
+                    // Check if game is starting
+                    checkGameStarting();
+                })
+                .catch(err => console.error("Error fetching player list:", err));
+        }
+        
+        // Check if game is starting
+        function checkGameStarting() {
+            fetch(`/check_game_starting/${roomCode}/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.is_starting) {
+                        // Show countdown and disable start button
+                        document.getElementById("start-button").disabled = true;
+                        startCountdown(data.countdown_from || 5);
+                    }
+                })
+                .catch(err => console.error("Error checking game status:", err));
+        }
+        
+        // Handle form submission
+        startForm.addEventListener("submit", function(e) {
+            e.preventDefault();
+            
+            // Get the CSRF token
+            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            // Send start game request
+            fetch(`/start_game_countdown/${roomCode}/${gameId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                    'Content-Type': 'application/json'
+                }
+            })
             .then(response => response.json())
             .then(data => {
-                const playerListElement = document.getElementById("player-list");
-                playerListElement.innerHTML = ""; // Clear old list
-
-                data.players.forEach(player => {
-                    const div = document.createElement("div");
-                    div.className = "player-entry";
-                    div.textContent = player;
-                    playerListElement.appendChild(div);
-                });
+                if (data.status === 'countdown_started') {
+                    document.getElementById("start-button").disabled = true;
+                }
             })
-            .catch(err => console.error("Error fetching player list:", err));
-    }
+            .catch(err => console.error("Error starting game:", err));
+        });
+        
+        // Countdown function
+        function startCountdown(seconds) {
+            countdownContainer.style.display = 'flex';
+            let count = seconds;
+            
+            countdownElement.textContent = count;
+            
+            const countdownInterval = setInterval(() => {
+                count--;
+                countdownElement.textContent = count;
+                
+                if (count <= 0) {
+                    clearInterval(countdownInterval);
+                    // Redirect to game page
+                    window.location.href = `/start_game/${roomCode}/${gameId}/`;
+                }
+            }, 1000);
+        }
 
-    // Initial fetch + polling
-    updatePlayerList(); // ✅ ensures it's loaded on first render too
-    setInterval(updatePlayerList, 10); // every 3s
+        // Initial fetch + polling
+        updatePlayerList();
+        setInterval(updatePlayerList, 2000); // Check every 2 seconds
+    });
 </script>
 {% endblock %}

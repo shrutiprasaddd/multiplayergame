@@ -330,51 +330,237 @@ class GameConsumer(AsyncWebsocketConsumer):
             'message': event['message']
         }))
 
+# class SnakeGameConsumer(AsyncWebsocketConsumer):
+#     async def connect(self):
+#         self.room_code = self.scope['url_route']['kwargs']['room_code']
+#         self.room_group_name = f"snake_game_{self.room_code}"
+
+#         # Initialize snake game data storage if it doesn't exist
+#         if not hasattr(self.channel_layer, "snake_game_data"):
+#             self.channel_layer.snake_game_data = {}
+
+#         # Add current player to the game room
+#         self.channel_layer.snake_game_data[self.channel_name] = [{"x": 100, "y": 100}]  # Default starting position
+
+#         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
+#         await self.accept()
+
+#     async def disconnect(self, close_code):
+#         # Remove player's snake data on disconnect
+#         if self.channel_name in self.channel_layer.snake_game_data:
+#             del self.channel_layer.snake_game_data[self.channel_name]
+
+#         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+
+#     async def receive(self, text_data):
+#         data = json.loads(text_data)
+
+#         if data.get("type") == "snake_update":
+#             # Update the player's snake position
+#             self.channel_layer.snake_game_data[self.channel_name] = data["snake"]
+
+#             # Broadcast the updated snake game state to all players
+#             await self.channel_layer.group_send(
+#                 self.room_group_name,
+#                 {
+#                     "type": "snake_game_update",
+#                     "snake_data": self.channel_layer.snake_game_data,
+#                 }
+#             )
+
+#     async def snake_game_update(self, event):
+#         # Broadcast updated snake data to all players in the room
+#         await self.send(text_data=json.dumps({
+#             "type": "snake_game_update",
+#             "snake_data": event["snake_data"],
+#         }))
+
+
+
+
+import json
+import random
+from channels.generic.websocket import AsyncWebsocketConsumer
+from channels.db import database_sync_to_async
+
 class SnakeGameConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_code = self.scope['url_route']['kwargs']['room_code']
         self.room_group_name = f"snake_game_{self.room_code}"
 
-        # Initialize snake game data storage if it doesn't exist
-        if not hasattr(self.channel_layer, "snake_game_data"):
-            self.channel_layer.snake_game_data = {}
+        # Initialize game data storage per room
+        if not hasattr(self.channel_layer, "game_data"):
+            self.channel_layer.game_data = {}
+        if self.room_group_name not in self.channel_layer.game_data:
+            self.channel_layer.game_data[self.room_group_name] = {
+                "snake_data": {},
+                "food_data": {}
+            }
 
-        # Add current player to the game room
-        self.channel_layer.snake_game_data[self.channel_name] = [{"x": 100, "y": 100}]  # Default starting position
+        # Add player with initial snake and score
+        self.channel_layer.game_data[self.room_group_name]["snake_data"][self.channel_name] = {
+            "snake": [{"x": 100, "y": 100}],
+            "score": 0
+        }
+
+        # Spawn initial food
+        await self.spawn_food()
 
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
 
     async def disconnect(self, close_code):
-        # Remove player's snake data on disconnect
-        if self.channel_name in self.channel_layer.snake_game_data:
-            del self.channel_layer.snake_game_data[self.channel_name]
-
+        if self.room_group_name in self.channel_layer.game_data:
+            if self.channel_name in self.channel_layer.game_data[self.room_group_name]["snake_data"]:
+                # Convert disconnected snake to food
+                snake = self.channel_layer.game_data[self.room_group_name]["snake_data"][self.channel_name]["snake"]
+                for segment in snake:
+                    food_id = f"{self.channel_name}_{random.randint(0, 1000000)}"
+                    self.channel_layer.game_data[self.room_group_name]["food_data"][food_id] = {
+                        "x": segment["x"],
+                        "y": segment["y"],
+                        "pulse": 1,
+                        "grow": True,
+                        "color": "orange",
+                        "points": 15,
+                        "baseSize": 8
+                    }
+                del self.channel_layer.game_data[self.room_group_name]["snake_data"][self.channel_name]
+            # Clean up empty rooms
+            if not self.channel_layer.game_data[self.room_group_name]["snake_data"]:
+                del self.channel_layer.game_data[self.room_group_name]
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
     async def receive(self, text_data):
         data = json.loads(text_data)
+        game_data = self.channel_layer.game_data[self.room_group_name]
 
         if data.get("type") == "snake_update":
-            # Update the player's snake position
-            self.channel_layer.snake_game_data[self.channel_name] = data["snake"]
+            # Update player's snake and score
+            game_data["snake_data"][self.channel_name] = {
+                "snake": data["snake"],
+                "score": data["score"]
+            }
 
-            # Broadcast the updated snake game state to all players
+            # Check for collisions
+            collided_channels = []
+            for channel, player_data in game_data["snake_data"].items():
+                head = player_data["snake"][0]
+                for other_channel, other_player_data in game_data["snake_data"].items():
+                    if channel != other_channel:
+                        for segment in other_player_data["snake"]:
+                            if abs(head["x"] - segment["x"]) < 20 and abs(head["y"] - segment["y"]) < 20:
+                                collided_channels.append(channel)
+                                break
+                if channel in collided_channels:
+                    break
+
+            # Handle collisions
+            for channel in set(collided_channels):
+                snake = game_data["snake_data"][channel]["snake"]
+                for segment in snake:
+                    food_id = f"{channel}_{len(game_data['food_data'])}"
+                    game_data["food_data"][food_id] = {
+                        "x": segment["x"],
+                        "y": segment["y"],
+                        "pulse": 1,
+                        "grow": True,
+                        "color": "orange",
+                        "points": 15,
+                        "baseSize": 8
+                    }
+                game_data["snake_data"][channel] = {
+                    "snake": [{"x": random.randint(-1000, 1000), "y": random.randint(-1000, 1000)}],
+                    "score": 0
+                }
+
+            # Broadcast game state
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
                     "type": "snake_game_update",
-                    "snake_data": self.channel_layer.snake_game_data,
+                    "snake_data": game_data["snake_data"],
+                    "food_data": game_data["food_data"]
                 }
             )
 
+        elif data.get("type") == "food_eaten":
+            # Remove eaten food
+            food_keys = list(game_data["food_data"].keys())
+            for index in sorted(data.get("eaten_indices", []), reverse=True):
+                if index < len(food_keys):
+                    del game_data["food_data"][food_keys[index]]
+            # Update player's score
+            game_data["snake_data"][self.channel_name]["score"] = data["score"]
+            # Spawn new food
+            await self.spawn_food(snake_head=data.get("snake_head"))
+            # Broadcast updated state
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    "type": "snake_game_update",
+                    "snake_data": game_data["snake_data"],
+                    "food_data": game_data["food_data"]
+                }
+            )
+
+        elif data.get("type") == "request_food":
+            await self.spawn_food(snake_head=data.get("snake_head"))
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    "type": "snake_game_update",
+                    "snake_data": game_data["snake_data"],
+                    "food_data": game_data["food_data"]
+                }
+            )
+
+        elif data.get("type") == "request_initial_state":
+            await self.send(text_data=json.dumps({
+                "type": "snake_game_update",
+                "snake_data": game_data["snake_data"],
+                "food_data": game_data["food_data"]
+            }))
+
+    async def spawn_food(self, snake_head=None):
+        game_data = self.channel_layer.game_data[self.room_group_name]
+        types = [
+            {"color": "red", "points": 30, "size": 8},
+            {"color": "yellow", "points": 20, "size": 10},
+            {"color": "blue", "points": 10, "size": 14},
+        ]
+        # Ensure at least 5 foods, up to 10
+        while len(game_data["food_data"]) < 10:
+            type_data = random.choice(types)
+            food_id = f"food_{random.randint(0, 1000000)}"
+            if snake_head:
+                # Spawn food within 500 units of snake head
+                x = snake_head["x"] + random.randint(-500, 500)
+                y = snake_head["y"] + random.randint(-500, 500)
+            else:
+                x = random.randint(-1000, 1000)
+                y = random.randint(-1000, 1000)
+            game_data["food_data"][food_id] = {
+                "x": x,
+                "y": y,
+                "pulse": 1,
+                "grow": True,
+                "color": type_data["color"],
+                "points": type_data["points"],
+                "baseSize": type_data["size"]
+            }
+        # Remove excess food if more than 10
+        while len(game_data["food_data"]) > 10:
+            food_keys = list(game_data["food_data"].keys())
+            del game_data["food_data"][food_keys[0]]
+
     async def snake_game_update(self, event):
-        # Broadcast updated snake data to all players in the room
         await self.send(text_data=json.dumps({
             "type": "snake_game_update",
             "snake_data": event["snake_data"],
+            "food_data": event["food_data"]
         }))
-#____________
+#____________snake end_________
 
 
 

@@ -3,6 +3,11 @@ from django.http import JsonResponse
 from .models import Game, GameRoom, PlayerStatus
 from django.contrib.auth.models import User
 import uuid
+# Add these imports to your existing views.py file
+from django.http import JsonResponse
+from django.utils import timezone
+from datetime import timedelta
+import json
 
 
 
@@ -80,6 +85,48 @@ def home(request):
 #                 return JsonResponse({'error': 'Invalid room code or room does not exist'}, status=400)
     
 #     return render(request, 'games/game_room.html', {'game': game})
+
+
+
+
+# New view to check if game is starting
+def check_game_starting(request, room_code):
+    try:
+        game_room = GameRoom.objects.get(room_code=room_code)
+        
+        if game_room.is_starting:
+            # Calculate remaining countdown time
+            if game_room.start_time:
+                now = timezone.now()
+                if now < game_room.start_time:
+                    seconds_left = (game_room.start_time - now).total_seconds()
+                    return JsonResponse({
+                        'is_starting': True,
+                        'countdown_from': int(seconds_left)
+                    })
+            
+            return JsonResponse({'is_starting': True, 'countdown_from': 5})
+        else:
+            return JsonResponse({'is_starting': False})
+    except GameRoom.DoesNotExist:
+        return JsonResponse({'is_starting': False, 'error': 'Room not found'})
+
+# New view to start the countdown
+def start_game_countdown(request, room_code, game_id):
+    if request.method == 'POST':
+        try:
+            game_room = GameRoom.objects.get(room_code=room_code)
+            
+            # Set the game to starting status
+            game_room.is_starting = True
+            game_room.start_time = timezone.now() + timedelta(seconds=5)  # 5 second countdown
+            game_room.save()
+            
+            return JsonResponse({'status': 'countdown_started'})
+        except GameRoom.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Room not found'}, status=404)
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)
 
 
 
@@ -216,39 +263,63 @@ def game_room_views(request, game_id):
 
 
 
-from django.urls import reverse
-from django.http import JsonResponse
-from django.shortcuts import render, redirect
-from .models import GameRoom
-
 def game_lobby(request, room_code, game_id):
-    game_room = GameRoom.objects.get(room_code=room_code)
-
-    # Validate the game ID
-    if game_room.game.game_id != game_id:
-        print("Room not found")
-        return redirect('home')  # Redirect to home if game ID doesn't match
-
-    players = game_room.players.all()  # Get the players in this game room
-
-    if request.method == 'POST':
-        # Set the game room to started
-        game_room.is_started = True
-        game_room.save()
-
-        # Get the redirect URL
-        redirect_url = reverse('start_game', kwargs={'room_code': room_code, 'game_id': game_id})
-
-        # If AJAX request, return JSON with redirect URL
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'redirect': redirect_url})
-
-        # Otherwise, perform normal redirect
-        return redirect(redirect_url)
-
-    return render(request, 'games/game_lobby.html', {'game_room': game_room, 'players': players})
-
-
+    try:
+        game_room = GameRoom.objects.get(room_code=room_code)
+        
+        # Validate the game ID
+        if game_room.game.game_id != game_id:
+            print("Room not found")
+            return redirect('home')  # Redirect to home if game ID doesn't match
+        
+        players = game_room.players.all()  # Get the players in this game room
+        
+        if request.method == 'POST':
+            # Check if the request is an AJAX request
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                # Set the game room to starting
+                game_room.is_starting = True
+                game_room.start_time = timezone.now() + timedelta(seconds=5)  # 5 second countdown
+                game_room.save()
+                
+                # Return JSON response for AJAX
+                return JsonResponse({
+                    'status': 'countdown_started',
+                    'redirect': reverse('start_game', kwargs={'room_code': room_code, 'game_id': game_id})
+                })
+            else:
+                # For traditional form submission, start the countdown
+                game_room.is_starting = True
+                game_room.start_time = timezone.now() + timedelta(seconds=5)
+                game_room.save()
+                
+                # Redirect to the same page to show countdown
+                return redirect('game_lobby', room_code=room_code, game_id=game_id)
+        
+        # Check if countdown is already in progress
+        countdown_in_progress = False
+        seconds_left = 0
+        
+        if game_room.is_starting and game_room.start_time:
+            now = timezone.now()
+            if now < game_room.start_time:
+                countdown_in_progress = True
+                seconds_left = int((game_room.start_time - now).total_seconds())
+            elif now >= game_room.start_time:
+                # Countdown has finished, redirect to game
+                return redirect('start_game', room_code=room_code, game_id=game_id)
+        
+        return render(request, 'games/game_lobby.html', {
+            'game_room': game_room,
+            'players': players,
+            'countdown_in_progress': countdown_in_progress,
+            'seconds_left': seconds_left
+        })
+        
+    except GameRoom.DoesNotExist:
+        return HttpResponseNotFound("Game room not found.")
+    
+    
 # games/views.py
 from django.http import HttpResponseNotFound
 from django.shortcuts import render, redirect

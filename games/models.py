@@ -49,7 +49,7 @@ class GameRoom(models.Model):
     is_private = models.BooleanField(default=False)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     players = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='game_rooms')
-    start_time = models.DateTimeField(null=True, blank=True)
+    
     is_started = models.CharField(
         max_length=15,
         choices=GameStatus.choices,
@@ -57,6 +57,8 @@ class GameRoom(models.Model):
     )
     max_players = models.PositiveIntegerField(default=4)
     is_active = models.BooleanField(default=True)
+    is_starting = models.BooleanField(default=False)
+    start_time = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.game.name} - {self.room_code}"
