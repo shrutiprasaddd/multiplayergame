@@ -408,9 +408,6 @@ def snake(request, room_code):
 def football(request,room_code):
     pass
 
-<<<<<<< HEAD
-
-=======
 # games/views.py
 def ludo(request, room_code):
     try:
@@ -424,15 +421,10 @@ def ludo(request, room_code):
 
 from django.http import JsonResponse
 from .models import GameRoom
->>>>>>> 3139c241f10c3e9062b3f79bb2e1d916f9630e1f
 def get_players(request, room_code):
     try:
         game_room = GameRoom.objects.get(room_code=room_code)
         players = game_room.players.all()
         return JsonResponse({'players': [p.username for p in players]})
     except GameRoom.DoesNotExist:
-<<<<<<< HEAD
         return JsonResponse({'players': []})
-=======
-        return JsonResponse({'players': []})
->>>>>>> 3139c241f10c3e9062b3f79bb2e1d916f9630e1f
