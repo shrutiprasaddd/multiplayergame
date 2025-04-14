@@ -8,8 +8,20 @@ from django.http import JsonResponse
 from django.utils import timezone
 from datetime import timedelta
 import json
-
-
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
+from django.http import JsonResponse, HttpResponseNotFound
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from django.urls import reverse
+from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Count
+from .models import Game, GameRoom, PlayerStatus
+from django.contrib.auth.models import User
+import uuid
+import requests
+from datetime import timedelta
+import json
 
 
 
@@ -88,7 +100,8 @@ def home(request):
 
 
 
-
+@login_required(login_url='login')
+@csrf_exempt
 # New view to check if game is starting
 def check_game_starting(request, room_code):
     try:
@@ -112,6 +125,8 @@ def check_game_starting(request, room_code):
         return JsonResponse({'is_starting': False, 'error': 'Room not found'})
 
 # New view to start the countdown
+@login_required(login_url='login')
+@csrf_exempt
 def start_game_countdown(request, room_code, game_id):
     if request.method == 'POST':
         try:
@@ -141,6 +156,8 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from .models import Game, GameRoom
 
+@csrf_exempt
+@login_required(login_url='login')
 @csrf_exempt
 def game_room_views(request, game_id):
     try:
@@ -262,7 +279,8 @@ def game_room_views(request, game_id):
     })
 
 
-
+@login_required(login_url='login')
+@csrf_exempt
 def game_lobby(request, room_code, game_id):
     try:
         game_room = GameRoom.objects.get(room_code=room_code)
@@ -319,13 +337,16 @@ def game_lobby(request, room_code, game_id):
     except GameRoom.DoesNotExist:
         return HttpResponseNotFound("Game room not found.")
     
-    
+
 # games/views.py
 from django.http import HttpResponseNotFound
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from .models import Game, GameRoom, PlayerStatus
 
+
+@login_required(login_url='login')
+@csrf_exempt
 def start_game(request, room_code, game_id):
     try:
         game_room = GameRoom.objects.get(room_code=room_code)
@@ -380,6 +401,8 @@ def start_game(request, room_code, game_id):
 from django.shortcuts import render
 from .models import GameRoom
 
+@login_required(login_url='login')
+@csrf_exempt
 def chess(request, room_code):
     try:
         # Fetch the game room by the room code
@@ -394,7 +417,8 @@ def chess(request, room_code):
         # Handle the case where the room does not exist
         return HttpResponseNotFound("Game room not found.")
 
-
+@login_required(login_url='login')
+@csrf_exempt
 def snake(request, room_code):
     try:
         game_room = GameRoom.objects.get(room_code=room_code)
@@ -404,11 +428,14 @@ def snake(request, room_code):
     except GameRoom.DoesNotExist:
         return HttpResponseNotFound("Game room not found.")
 
-
+@login_required(login_url='login')
+@csrf_exempt
 def football(request,room_code):
     pass
 
 # games/views.py
+@login_required(login_url='login')
+@csrf_exempt
 def ludo(request, room_code):
     try:
         game_room = GameRoom.objects.get(room_code=room_code)
@@ -421,6 +448,8 @@ def ludo(request, room_code):
 
 from django.http import JsonResponse
 from .models import GameRoom
+@login_required(login_url='login')
+@csrf_exempt
 def get_players(request, room_code):
     try:
         game_room = GameRoom.objects.get(room_code=room_code)
