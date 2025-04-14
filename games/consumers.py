@@ -429,7 +429,36 @@ class SnakeGameConsumer(AsyncWebsocketConsumer):
             # Clean up empty rooms
             if not self.channel_layer.game_data[self.room_group_name]["snake_data"]:
                 del self.channel_layer.game_data[self.room_group_name]
+            else:
+                # Broadcast updated state after disconnection
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        "type": "snake_game_update",
+                        "snake_data": self.channel_layer.game_data[self.room_group_name]["snake_data"],
+                        "food_data": self.channel_layer.game_data[self.room_group_name]["food_data"],
+                        "leaderboard": self.compute_leaderboard()
+                    }
+                )
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+
+    def compute_leaderboard(self):
+        game_data = self.channel_layer.game_data[self.room_group_name]
+        # Get all players and their scores
+        players = [
+            {"id": channel, "score": data["score"]}
+            for channel, data in game_data["snake_data"].items()
+        ]
+        # Sort by score in descending order
+        players.sort(key=lambda x: x["score"], reverse=True)
+        # Top 3 players
+        top_3 = players[:3]
+        # Compute ranks (1-based)
+        ranks = {player["id"]: i + 1 for i, player in enumerate(players)}
+        return {
+            "top_3": top_3,
+            "ranks": ranks
+        }
 
     async def receive(self, text_data):
         data = json.loads(text_data)
@@ -474,13 +503,14 @@ class SnakeGameConsumer(AsyncWebsocketConsumer):
                     "score": 0
                 }
 
-            # Broadcast game state
+            # Broadcast game state with leaderboard
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
                     "type": "snake_game_update",
                     "snake_data": game_data["snake_data"],
-                    "food_data": game_data["food_data"]
+                    "food_data": game_data["food_data"],
+                    "leaderboard": self.compute_leaderboard()
                 }
             )
 
@@ -494,24 +524,27 @@ class SnakeGameConsumer(AsyncWebsocketConsumer):
             game_data["snake_data"][self.channel_name]["score"] = data["score"]
             # Spawn new food
             await self.spawn_food(snake_head=data.get("snake_head"))
-            # Broadcast updated state
+            # Broadcast updated state with leaderboard
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
                     "type": "snake_game_update",
                     "snake_data": game_data["snake_data"],
-                    "food_data": game_data["food_data"]
+                    "food_data": game_data["food_data"],
+                    "leaderboard": self.compute_leaderboard()
                 }
             )
 
         elif data.get("type") == "request_food":
             await self.spawn_food(snake_head=data.get("snake_head"))
+            # Broadcast updated state with leaderboard
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
                     "type": "snake_game_update",
                     "snake_data": game_data["snake_data"],
-                    "food_data": game_data["food_data"]
+                    "food_data": game_data["food_data"],
+                    "leaderboard": self.compute_leaderboard()
                 }
             )
 
@@ -519,7 +552,8 @@ class SnakeGameConsumer(AsyncWebsocketConsumer):
             await self.send(text_data=json.dumps({
                 "type": "snake_game_update",
                 "snake_data": game_data["snake_data"],
-                "food_data": game_data["food_data"]
+                "food_data": game_data["food_data"],
+                "leaderboard": self.compute_leaderboard()
             }))
 
     async def spawn_food(self, snake_head=None):
@@ -558,7 +592,8 @@ class SnakeGameConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             "type": "snake_game_update",
             "snake_data": event["snake_data"],
-            "food_data": event["food_data"]
+            "food_data": event["food_data"],
+            "leaderboard": event["leaderboard"]
         }))
 #____________snake end_________
 

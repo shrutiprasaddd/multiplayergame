@@ -265,3 +265,9 @@ class PlayerActivityLog(models.Model):
 
     def __str__(self):
         return f"{self.player.user.username}: {self.action} at {self.timestamp}"
+
+
+from django.db import models
+
+class NewModel(models.Model):  # ← This must inherit from models.Model
+    name = models.CharField(max_length=100)

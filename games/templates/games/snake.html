@@ -26,6 +26,33 @@
         box-shadow: 0 0 15px #00ffcc;
         backdrop-filter: blur(3px);
       }
+      #leaderboard {
+        color: white;
+        font-size: 18px;
+        background: rgba(0, 0, 0, 0.9);
+        padding: 12px 25px;
+        border-radius: 12px;
+        position: fixed;
+        top: 80px; /* Below scoreboard */
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        box-shadow: 0 0 15px #00ffcc;
+        backdrop-filter: blur(3px);
+        text-align: center;
+        min-width: 200px;
+      }
+      #leaderboard ol {
+        margin: 10px 0;
+        padding-left: 20px;
+      }
+      #leaderboard li {
+        margin: 5px 0;
+      }
+      #your-rank {
+        margin-top: 10px;
+        font-weight: bold;
+      }
       #boost-meter {
         position: fixed;
         bottom: 20px;
@@ -54,6 +81,11 @@
   </head>
   <body>
     <div id="scoreboard">Score: <span id="score">0</span></div>
+    <div id="leaderboard">
+      <div>Leaderboard</div>
+      <ol id="top-players"></ol>
+      <div id="your-rank">Your Rank: -</div>
+    </div>
     <div id="boost-meter"><div id="boost-bar"></div></div>
     <canvas id="gameCanvas"></canvas>
 
@@ -114,6 +146,10 @@
                 snake = data.snake_data[socket.channel_name].snake;
                 document.getElementById("score").innerText = score;
               }
+              // Update leaderboard
+              if (data.leaderboard) {
+                updateLeaderboard(data.leaderboard, socket.channel_name);
+              }
             }
           } catch (error) {
             console.error("WebSocket message error:", error);
@@ -148,7 +184,24 @@
             snake_head: snake[0] // Send snake's head position
           }));
         }
-      }, 2000); // Reduced interval for more frequent checks
+      }, 2000);
+
+      function updateLeaderboard(leaderboard, channel_name) {
+        const topPlayers = leaderboard.top_3;
+        const myRank = leaderboard.ranks[channel_name] || "-";
+
+        // Update top 3 players
+        const topPlayersList = document.getElementById("top-players");
+        topPlayersList.innerHTML = "";
+        topPlayers.forEach((player, index) => {
+          const li = document.createElement("li");
+          li.textContent = `${index + 1}. Player ${player.id.slice(-4)} - ${player.score}`;
+          topPlayersList.appendChild(li);
+        });
+
+        // Update user's rank
+        document.getElementById("your-rank").textContent = `Your Rank: ${myRank}`;
+      }
 
       window.addEventListener("keydown", (e) => {
         if (e.key === "Shift" || e.key === " ") boosting = true;
