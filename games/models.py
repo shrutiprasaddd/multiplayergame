@@ -84,6 +84,7 @@ class PlayerStatus(models.Model):
     current_position = models.JSONField(default=dict)  # For Ludo: {"piece1": 0, "piece2": 0, "piece3": 0, "piece4": 0}
     is_ready = models.BooleanField(default=False)  # Track if player is ready to start
     color = models.CharField(max_length=20, blank=True, null=True)  # Ludo player color (e.g., red, blue, green, yellow)
+    last_active = models.DateTimeField(auto_now=True)  # Automatically updates on save
 
     class Meta:
         unique_together = ('user', 'game_room')

@@ -1,9 +1,10 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
+from channels.db import database_sync_to_async
 from .models import GameRoom, PlayerStatus
 from django.contrib.auth.models import User
-from channels.db import database_sync_to_async
 from datetime import datetime
+from django.utils import timezone
 
 
 
@@ -281,7 +282,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 next_player = 'black' if player == 'white' else 'white'
 
                 # Optional: Add server-side move validation here if desired
-                # For now, trust the client’s board state
+                # For now, trust the client's board state
 
                 await self.channel_layer.group_send(
                     self.room_group_name,
@@ -329,6 +330,10 @@ class GameConsumer(AsyncWebsocketConsumer):
             'type': 'chat_message',
             'message': event['message']
         }))
+
+
+
+#___________start Snake_____________
 
 # class SnakeGameConsumer(AsyncWebsocketConsumer):
 #     async def connect(self):
@@ -892,4 +897,216 @@ class LudoGameConsumer(AsyncWebsocketConsumer):
             "username": event["username"],
             "message": event["message"],
             "timestamp": event["timestamp"],
+        }))        
+
+
+from channels.generic.websocket import AsyncWebsocketConsumer
+from channels.db import database_sync_to_async
+from .models import PlayerStatus
+import json
+
+class TicTacToeConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        self.room_code = self.scope['url_route']['kwargs']['room_code']
+        self.user = self.scope["user"]
+        self.room_group_name = f"tic_tac_toe_{self.room_code}"
+
+        self.game_room = await self.get_game_room(self.room_code)
+
+        if not await self.is_user_in_game(self.user, self.game_room):
+            await self.close()
+            return
+
+        await self.channel_layer.group_add(self.room_group_name, self.channel_name)
+        await self.accept()
+
+        player_symbol = await self.assign_player_symbol(self.user, self.game_room)
+        if player_symbol == 'spectator':
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': 'Room is full!',
+            }))
+            await self.close()
+            return
+
+        # Update PlayerStatus with symbol
+        await self.update_player_status(self.user, self.game_room, player_symbol)
+
+        await self.send(text_data=json.dumps({
+            'type': 'player_assignment',
+            'symbol': player_symbol,
+            'player': self.user.username,
+        }))
+
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'player_join',
+                'player': self.user.username,
+            }
+        )
+
+        current_players = await self.get_player_count(self.game_room)
+        if current_players == 2:
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'game_start',
+                    'message': 'Game started with 2 players!',
+                    'current_player': 'X',
+                }
+            )
+
+    @database_sync_to_async
+    def get_game_room(self, room_code):
+        return GameRoom.objects.get(room_code=room_code)
+
+    @database_sync_to_async
+    def is_user_in_game(self, user, game_room):
+        return user in game_room.players.all()
+
+    @database_sync_to_async
+    def assign_player_symbol(self, user, game_room):
+        players = list(game_room.players.all())
+        if len(players) > 2:
+            return 'spectator'
+        if players[0] == user:
+            return 'X'
+        elif players[1] == user:
+            return 'O'
+        return 'spectator'
+
+    @database_sync_to_async
+    def update_player_status(self, user, game_room, symbol):
+        player_status, created = PlayerStatus.objects.get_or_create(
+            user=user,
+            game_room=game_room,
+            defaults={'score': 0, 'last_active': timezone.now(), 'current_position': {'symbol': symbol}}
+        )
+        if not created:
+            player_status.current_position = {'symbol': symbol}
+            player_status.last_active = timezone.now()
+            player_status.save()
+
+    @database_sync_to_async
+    def get_player_count(self, game_room):
+        return game_room.players.count()
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+
+    async def receive(self, text_data):
+        print(f"Received WebSocket message: {text_data}")  # Debug log
+        try:
+            data = json.loads(text_data)
+            action = data.get('type')
+
+            if action == 'join':
+                # Handle join message (no action needed since connect handles it)
+                pass
+
+            elif action == 'move':
+                if 'move' not in data or 'board' not in data or 'player' not in data:
+                    print(f"Invalid move message: {data}")
+                    await self.send(text_data=json.dumps({
+                        'type': 'error',
+                        'message': 'Invalid move data'
+                    }))
+                    return
+                move = data['move']
+                board = data['board']
+                player = data['player']
+                next_player = 'O' if player == 'X' else 'X'
+
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'move',
+                        'player': player,
+                        'move': move,
+                        'board': board,
+                        'current_player': next_player,
+                    }
+                )
+
+            elif action == 'timeout':
+                if 'player' not in data or 'next_player' not in data:
+                    print(f"Invalid timeout message: {data}")
+                    await self.send(text_data=json.dumps({
+                        'type': 'error',
+                        'message': 'Invalid timeout data'
+                    }))
+                    return
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'timeout',
+                        'player': data['player'],
+                        'next_player': data['next_player'],
+                    }
+                )
+
+            elif action == 'chat_message':
+                if 'message' not in data:
+                    print(f"Invalid chat message: {data}")
+                    await self.send(text_data=json.dumps({
+                        'type': 'error',
+                        'message': 'Invalid chat message'
+                    }))
+                    return
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'chat_message',
+                        'message': data['message']
+                    }
+                )
+
+            else:
+                print(f"Unknown action: {action}")
+                await self.send(text_data=json.dumps({
+                    'type': 'error',
+                    'message': f'Unknown action: {action}'
+                }))
+
+        except json.JSONDecodeError:
+            print(f"Invalid JSON: {text_data}")
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': 'Invalid message format'
+            }))
+
+    async def player_join(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'player_join',
+            'player': event['player'],
+        }))
+
+    async def game_start(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'game_start',
+            'message': event['message'],
+            'current_player': event['current_player'],
+        }))
+
+    async def move(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'move',
+            'player': event['player'],
+            'move': event['move'],
+            'board': event['board'],
+            'current_player': event['current_player'],
+        }))
+
+    async def timeout(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'timeout',
+            'player': event['player'],
+            'next_player': event['next_player'],
+        }))
+
+    async def chat_message(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'chat_message',
+            'message': event['message']
         }))        
