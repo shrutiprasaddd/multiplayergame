@@ -49,9 +49,10 @@ def home(request):
     for game in games:
         game.rooms = GameRoom.objects.filter(game=game, is_active=True).count()
 
-    playcanvas_games = fetch_playcanvas_games()  # ✅ Now this works without an error
+    #playcanvas_games = fetch_playcanvas_games()  # ✅ Now this works without an error
 
-    return render(request, 'games/home.html', {'games': games, 'playcanvas_games': playcanvas_games})
+    #return render(request, 'games/home.html', {'games': games, 'playcanvas_games': playcanvas_games})
+    return render(request, 'games/home.html', {'games': games})
 
 # def home(request):
 #     games = Game.objects.filter(is_active=True)
@@ -158,7 +159,6 @@ from .models import Game, GameRoom
 
 @csrf_exempt
 @login_required(login_url='login')
-@csrf_exempt
 def game_room_views(request, game_id):
     try:
         game = Game.objects.get(game_id=game_id)
@@ -169,7 +169,7 @@ def game_room_views(request, game_id):
         action = request.POST.get('action')
 
         if action == 'join_auto':
-            if game.slug == "chess":
+            if game.slug in ["chess", "tic-tac-toe"]:
                 # Find an available room with one player
                 room = GameRoom.objects.filter(game=game, is_active=True, is_private=False).annotate(
                     player_count=Count('players')
@@ -191,15 +191,30 @@ def game_room_views(request, game_id):
                     room.save()
 
                 return JsonResponse({'room_code': room.room_code, 'game_id': game_id})
-
+                
             elif game.slug == "snake":
-                # Find an available room with less than 99 players
-                room = GameRoom.objects.filter(game=game, is_active=True, is_private=False).annotate(
+                activity_threshold = timezone.now() - timedelta(minutes=5)
+
+                # Clean up inactive rooms
+                GameRoom.objects.filter(
+                    is_active=True,
+                    is_private=False,
+                    playerstatus__last_active__lt=activity_threshold
+                ).update(is_active=False)
+
+                # Find an available room with at least one active player
+                room = GameRoom.objects.filter(
+                    game=game,
+                    is_active=True,
+                    is_private=False
+                ).annotate(
                     player_count=Count('players')
-                ).filter(player_count__lt=99).first()
+                ).filter(
+                    player_count__lt=99,
+                    playerstatus__last_active__gte=activity_threshold
+                ).first()
 
                 if not room:
-                    # Create a new room if all are full
                     room = GameRoom.objects.create(
                         game=game,
                         created_by=request.user,
@@ -208,10 +223,25 @@ def game_room_views(request, game_id):
                     )
 
                 room.players.add(request.user)
+
+                player_status, created = PlayerStatus.objects.get_or_create(
+                    user=request.user,
+                    game_room=room,
+                    defaults={
+                        'score': 0,
+                        'last_active': timezone.now()
+                    }
+                )
+                if not created:
+                    player_status.last_active = timezone.now()
+                    player_status.save()
+
                 room.save()
 
-                return JsonResponse({'room_code': room.room_code, 'game_id': game_id})
-            
+                return JsonResponse({
+                    'room_code': room.room_code,
+                    'game_id': game_id
+                })
             elif game.slug == "ludo":
                 # Find an available room with less than 4 players
                 room = GameRoom.objects.filter(game=game, is_active=True, is_private=False).annotate(
@@ -233,11 +263,9 @@ def game_room_views(request, game_id):
                     )
                     room.players.add(request.user)
                     room.save()
-
-                return JsonResponse({'room_code': room.room_code, 'game_id': game_id})
+            
 
         elif action == 'create_private_room':
-            # Create a private room
             room = GameRoom.objects.create(
                 game=game,
                 created_by=request.user,
@@ -245,24 +273,48 @@ def game_room_views(request, game_id):
                 is_private=True
             )
             room.players.add(request.user)
+
+            player_status, created = PlayerStatus.objects.get_or_create(
+                user=request.user,
+                game_room=room,
+                defaults={
+                    'score': 0,
+                    'last_active': timezone.now()
+                }
+            )
+            if not created:
+                player_status.last_active = timezone.now()
+                player_status.save()
+
             room.save()
-        
-            
 
             return JsonResponse({'room_code': room.room_code, 'game_id': game_id, 'private': True})
-        
+
         elif action == 'join':
             room_code = request.POST.get('room_code', '').strip().upper()
             try:
                 room = GameRoom.objects.get(
-                    room_code=room_code, 
-                    game=game, 
+                    room_code=room_code,
+                    game=game,
                     is_active=True
                 )
                 room.players.add(request.user)
+
+                player_status, created = PlayerStatus.objects.get_or_create(
+                    user=request.user,
+                    game_room=room,
+                    defaults={
+                        'score': 0,
+                        'last_active': timezone.now()
+                    }
+                )
+                if not created:
+                    player_status.last_active = timezone.now()
+                    player_status.save()
+
                 room.save()
                 return JsonResponse({
-                    'room_code': room.room_code, 
+                    'room_code': room.room_code,
                     'game_id': game_id
                 })
             except GameRoom.DoesNotExist:
@@ -270,14 +322,18 @@ def game_room_views(request, game_id):
                     'error': 'Invalid room code or room does not exist'
                 }, status=400)
 
-    # Fetch all active public rooms
-    public_rooms = GameRoom.objects.filter(game=game, is_active=True, is_private=False)
+    activity_threshold = timezone.now() - timedelta(minutes=5)
+    public_rooms = GameRoom.objects.filter(
+        game=game,
+        is_active=True,
+        is_private=False,
+        playerstatus__last_active__gte=activity_threshold
+    )
 
     return render(request, 'games/game_room.html', {
         'game': game,
         'public_rooms': public_rooms
     })
-
 
 @login_required(login_url='login')
 @csrf_exempt
@@ -285,36 +341,38 @@ def game_lobby(request, room_code, game_id):
     try:
         game_room = GameRoom.objects.get(room_code=room_code)
         
-        # Validate the game ID
         if game_room.game.game_id != game_id:
-            print("Room not found")
-            return redirect('home')  # Redirect to home if game ID doesn't match
+            return redirect('home')
         
-        players = game_room.players.all()  # Get the players in this game room
+        player_status, created = PlayerStatus.objects.get_or_create(
+            user=request.user,
+            game_room=game_room,
+            defaults={
+                'score': 0,
+                'last_active': timezone.now()
+            }
+        )
+        if not created:
+            player_status.last_active = timezone.now()
+            player_status.save()
+
+        players = game_room.players.all()
         
         if request.method == 'POST':
-            # Check if the request is an AJAX request
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                # Set the game room to starting
                 game_room.is_starting = True
-                game_room.start_time = timezone.now() + timedelta(seconds=5)  # 5 second countdown
+                game_room.start_time = timezone.now() + timedelta(seconds=5)
                 game_room.save()
-                
-                # Return JSON response for AJAX
                 return JsonResponse({
                     'status': 'countdown_started',
                     'redirect': reverse('start_game', kwargs={'room_code': room_code, 'game_id': game_id})
                 })
             else:
-                # For traditional form submission, start the countdown
                 game_room.is_starting = True
                 game_room.start_time = timezone.now() + timedelta(seconds=5)
                 game_room.save()
-                
-                # Redirect to the same page to show countdown
                 return redirect('game_lobby', room_code=room_code, game_id=game_id)
         
-        # Check if countdown is already in progress
         countdown_in_progress = False
         seconds_left = 0
         
@@ -324,7 +382,6 @@ def game_lobby(request, room_code, game_id):
                 countdown_in_progress = True
                 seconds_left = int((game_room.start_time - now).total_seconds())
             elif now >= game_room.start_time:
-                # Countdown has finished, redirect to game
                 return redirect('start_game', room_code=room_code, game_id=game_id)
         
         return render(request, 'games/game_lobby.html', {
@@ -336,7 +393,6 @@ def game_lobby(request, room_code, game_id):
         
     except GameRoom.DoesNotExist:
         return HttpResponseNotFound("Game room not found.")
-    
 
 # games/views.py
 from django.http import HttpResponseNotFound
@@ -389,6 +445,18 @@ def start_game(request, room_code, game_id):
             return render(request, 'games/ludo.html', {
                 'game_room': game_room,
                 'players_with_positions': players_with_positions
+            })
+        elif game.slug == "tic-tac-toe":
+            players = []
+            for player in game_room.players.all():
+                player_status = PlayerStatus.objects.filter(user=player, game_room=game_room).first()
+                players.append({
+                    'username': player.username,
+                    'symbol': player_status.current_position.get('symbol', '') if player_status else ''
+                })
+            return render(request, 'games/tic_tac_toe.html', {
+                'game_room': game_room,
+                'players': players
             })
         # Add other game cases (chess, snake, etc.) as needed
         else:
@@ -446,6 +514,28 @@ def ludo(request, room_code):
         return HttpResponseNotFound("Game room not found.")
 
 
+@login_required(login_url='login')
+@csrf_exempt
+def tic_tac_toe(request, room_code):
+    try:
+        game_room = GameRoom.objects.get(room_code=room_code)
+        if not game_room.is_active or game_room.game.slug != "tic-tac-toe":
+            return redirect('game_lobby', room_code=room_code, game_id=game_room.game.game_id)
+        players = []
+        for player in game_room.players.all():
+            player_status = PlayerStatus.objects.filter(user=player, game_room=game_room).first()
+            players.append({
+                'username': player.username,
+                'symbol': player_status.current_position.get('symbol', '') if player_status else ''
+            })
+        return render(request, 'games/tic_tac_toe.html', {
+            'game_room': game_room,
+            'players': players
+        })
+    except GameRoom.DoesNotExist:
+        return HttpResponseNotFound("Game room not found.")
+
+
 from django.http import JsonResponse
 from .models import GameRoom
 @login_required(login_url='login')
@@ -457,3 +547,4 @@ def get_players(request, room_code):
         return JsonResponse({'players': [p.username for p in players]})
     except GameRoom.DoesNotExist:
         return JsonResponse({'players': []})
+    
