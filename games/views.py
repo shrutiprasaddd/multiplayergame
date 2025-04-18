@@ -547,7 +547,4 @@ def get_players(request, room_code):
         return JsonResponse({'players': [p.username for p in players]})
     except GameRoom.DoesNotExist:
         return JsonResponse({'players': []})
-<<<<<<< HEAD
     
-=======
->>>>>>> 837943f29dac85771212e666780f83addbe2f51b
